@@ -35,17 +35,16 @@ export async function GET(request: NextRequest) {
 
     const buffer = Buffer.from(template.storageUrl, "base64");
     const docxBuffer = generateDocx(buffer, valuesRecord);
-    const arrayBuffer = Uint8Array.from(docxBuffer).buffer;
 
-    const safeTemplateName = template.name.replace(/\s+/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const safeGenName = generation.name.replace(/\s+/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const safeTemplateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const safeGenName = generation.name.replace(/[^a-zA-Z0-9]/g, '_');
     const filename = `${safeTemplateName}_${safeGenName}.docx`;
 
-    return new Response(arrayBuffer, {
+    return new Response(docxBuffer as any, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       },
     });
   } catch (error) {

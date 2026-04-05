@@ -49,23 +49,15 @@ async function TemplateList({ searchParams, allAvailableTags }: {
   }
 
   if (allTemplates.length === 0) {
-    return (
-      <div className="sm:col-span-2 py-20 text-center space-y-4 border rounded-xl bg-card shadow-sm">
-        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-          <FileText className="w-8 h-8 text-muted-foreground" />
+    if (selectedTags.length > 0) {
+      return (
+        <div className="sm:col-span-1 p-8 text-center space-y-4 border rounded-xl bg-card shadow-sm flex flex-col items-center justify-center">
+          <FileText className="w-8 h-8 text-muted-foreground opacity-50" />
+          <p className="text-sm text-muted-foreground">Nenhum modelo com estas tags.</p>
         </div>
-        <div className="space-y-1">
-          <h3 className="font-semibold text-foreground">
-            {selectedTags.length > 0 ? "Nenhum modelo com estas tags" : "Nenhum modelo ainda"}
-          </h3>
-          <p className="text-muted-foreground">
-            {selectedTags.length > 0 
-              ? "Tente remover alguns filtros para encontrar o que procura." 
-              : "Envie seu primeiro .docx para começar."}
-          </p>
-        </div>
-      </div>
-    );
+      );
+    }
+    return null; // Don't show anything extra if no templates, UploadTemplate is already there
   }
 
   return (
@@ -92,49 +84,25 @@ export default async function HomePage(props: {
       <Header />
       
       <main className="container mx-auto px-4 pt-12">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-12 items-start">
+        <div className="max-w-6xl mx-auto space-y-8">
           
-          <div className="space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Painel de Modelos
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Gerencie seus modelos docx e gere documentos personalizados.
-              </p>
-            </div>
-
-            <DashboardFilter availableTags={allAvailableTags} />
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Suspense fallback={<div className="sm:col-span-2 py-20 text-center text-muted-foreground">Carregando modelos...</div>}>
-                <TemplateList searchParams={searchParams} allAvailableTags={allAvailableTags} />
-              </Suspense>
-            </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Painel de Modelos
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Gerencie seus modelos docx e gere documentos personalizados.
+            </p>
           </div>
 
-          <aside className="sticky top-28 space-y-6">
-            <UploadTemplate />
-            
-            <div className="p-6 rounded-2xl bg-accent text-accent-foreground shadow-xl shadow-accent/20">
-              <h3 className="font-bold text-lg mb-4">Como funciona</h3>
-              <ul className="space-y-4 text-accent-foreground/90 text-sm">
-                <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">1</span>
-                  <p>Envie um docx com marcadores <code className="bg-accent-foreground/10 px-1 rounded text-accent-foreground">##NOME##</code></p>
-                </li>
-                <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">2</span>
-                  <p>Os campos são extraídos automaticamente</p>
-                </li>
-                <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">3</span>
-                  <p>Preencha o formulário e salve as gerações</p>
-                </li>
-              </ul>
-            </div>
-          </aside>
+          <DashboardFilter availableTags={allAvailableTags} />
 
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <UploadTemplate />
+            <Suspense fallback={<div className="sm:col-span-1 lg:col-span-2 py-20 text-center text-muted-foreground">Carregando modelos...</div>}>
+              <TemplateList searchParams={searchParams} allAvailableTags={allAvailableTags} />
+            </Suspense>
+          </div>
         </div>
       </main>
     </div>

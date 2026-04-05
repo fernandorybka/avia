@@ -1,0 +1,37 @@
+import { pgTable, text, timestamp, uuid, varchar, unique } from "drizzle-orm/pg-core";
+
+export const templates = pgTable("templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  content: text("content"), // Extracted raw text for rendering/preview
+  storageUrl: text("storage_url"), // URL or Base64 of the original docx
+  tags: text("tags").array().notNull().default([]), // List of tags for filtering
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const templatePlaceholders = pgTable("template_placeholders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").references(() => templates.id, { onDelete: "cascade" }).notNull(),
+  placeholder: text("placeholder").notNull(), // ##NOME##
+  fieldKey: text("field_key").notNull(), // NOME
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const documentGenerations = pgTable("document_generations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id", { length: 255 }).notNull(), // Mocked user_id
+  name: text("name").notNull(), // Name for the profile/pre-fill
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const documentGenerationValues = pgTable("document_generation_values", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  generationId: uuid("generation_id").references(() => documentGenerations.id, { onDelete: "cascade" }).notNull(),
+  fieldKey: text("field_key").notNull(),
+  fieldValue: text("field_value").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  unique().on(t.generationId, t.fieldKey)
+]);

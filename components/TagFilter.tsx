@@ -21,7 +21,7 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
-      <span className="text-sm font-medium text-slate-500 mr-2">Filtrar por:</span>
+      <span className="text-sm font-medium text-muted-foreground mr-2">Filtrar por:</span>
       <div className="flex flex-wrap gap-2">
         {safeAvailableTags.map((tag) => {
           const isSelected = safeSelectedTags.includes(tag);
@@ -31,15 +31,13 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
               variant={isSelected ? "default" : "outline"}
               className={cn(
                 "cursor-pointer transition-all px-3 py-1 flex items-center gap-1",
-                isSelected 
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white border-transparent" 
-                  : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 group"
+                !isSelected && "hover:bg-muted"
               )}
               onClick={() => onToggleTag(tag)}
             >
               {tag}
               {isSelected && (
-                <X className="w-3 h-3 hover:text-white" />
+                <X className="w-3 h-3" />
               )}
             </Badge>
           );
@@ -49,7 +47,7 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-slate-400 hover:text-slate-600 text-xs px-2"
+          className="h-8 text-muted-foreground hover:text-foreground text-xs px-2"
           onClick={onClear}
         >
           Limpar filtros

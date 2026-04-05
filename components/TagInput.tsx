@@ -68,7 +68,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
           {tag}
           <button
             onClick={() => handleRemoveTag(tag)}
-            className="hover:bg-slate-200 rounded-full p-0.5 transition-colors"
+            className="hover:bg-muted rounded-full p-0.5 transition-colors"
           >
             <X className="w-3 h-3" />
           </button>
@@ -80,7 +80,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
           <Button
             variant="outline"
             size="sm"
-            className="h-8 border-dashed border-slate-300 text-slate-500 hover:text-slate-900"
+            className="h-8 border-dashed border-border text-muted-foreground hover:text-foreground"
           >
             <Plus className="w-4 h-4 mr-1" />
             Adicionar Tag
@@ -101,11 +101,11 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
             <CommandList>
               <CommandEmpty>
                 <div 
-                  className="p-2 cursor-pointer hover:bg-slate-100 flex items-center justify-between text-sm"
+                  className="p-2 cursor-pointer hover:bg-muted flex items-center justify-between text-sm"
                   onClick={() => handleAddTag(inputValue)}
                 >
                   Criar "{inputValue}"
-                  <Plus className="w-3 h-3 text-slate-400" />
+                  <Plus className="w-3 h-3 text-muted-foreground" />
                 </div>
               </CommandEmpty>
               <CommandGroup>

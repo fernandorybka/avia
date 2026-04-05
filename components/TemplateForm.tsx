@@ -13,6 +13,13 @@ import { Loader2, CheckCircle2, Save, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Placeholder {
   fieldKey: string;
@@ -132,31 +139,33 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-lg border-slate-200">
-      <CardHeader className="border-b bg-slate-50/50 rounded-t-xl">
-        <CardTitle className="text-2xl font-bold text-slate-800">{templateName}</CardTitle>
+    <Card className="w-full max-w-2xl mx-auto shadow-lg border-border">
+      <CardHeader className="border-b bg-muted/50 rounded-t-xl">
+        <CardTitle className="text-2xl font-bold text-foreground">{templateName}</CardTitle>
         <CardDescription>
           Preencha os campos abaixo para gerar um novo documento.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         
-        <div className="mb-8 p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <div className="mb-8 p-4 bg-muted/50 rounded-xl border border-border">
           <div className="space-y-2">
-            <Label htmlFor="profile-select" className="text-slate-700 font-semibold">
+            <Label htmlFor="profile-select" className="text-foreground font-semibold">
               Carregar dados salvos
             </Label>
-            <select
-              id="profile-select"
-              value={selectedProfile}
-              onChange={(e) => setSelectedProfile(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="new">-- Novo Preenchimento (Em branco) --</option>
-              {pastGenerations.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
+            <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+              <SelectTrigger id="profile-select" className="w-full bg-background">
+                <SelectValue placeholder="Selecione um registro" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">-- Novo Preenchimento (Em branco) --</SelectItem>
+                {pastGenerations.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -165,11 +174,11 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
             {placeholders.map((p, idx) => (
               <div key={p.fieldKey} className="space-y-2 relative">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor={p.fieldKey} className="text-slate-700 font-medium capitalize">
+                  <Label htmlFor={p.fieldKey} className="text-foreground font-medium capitalize">
                     {p.fieldKey.replace(/_/g, " ").toLowerCase()}
                   </Label>
                   <div className="flex items-center gap-2" title="Salvar este campo no banco de dados para a próxima vez">
-                    <span className="text-[10px] text-slate-400 font-medium uppercase">Salvar</span>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase">Salvar</span>
                     <Switch 
                       checked={shouldSaveMap[p.fieldKey]} 
                       onCheckedChange={(checked) => toggleSave(p.fieldKey, checked)}
@@ -182,19 +191,19 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
                   id={p.fieldKey}
                   placeholder={`Digite ${p.fieldKey.toLowerCase()}`}
                   {...register(p.fieldKey)}
-                  className={errors[p.fieldKey] ? "border-red-500 focus-visible:ring-red-500" : "border-slate-200"}
+                  className={errors[p.fieldKey] ? "border-destructive focus-visible:ring-destructive" : "border-input"}
                   tabIndex={idx + 1}
                 />
                 
                 {errors[p.fieldKey] && (
-                  <p className="text-xs text-red-500 font-medium">{errors[p.fieldKey]?.message as string}</p>
+                  <p className="text-xs text-destructive font-medium">{errors[p.fieldKey]?.message as string}</p>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
-            <div className="text-sm text-slate-500 flex items-center gap-2">
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
               <Settings2 className="w-4 h-4" />
               <span>Ajuste os dados e gere o documento abaixo.</span>
             </div>

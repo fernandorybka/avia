@@ -61,20 +61,20 @@ export default async function CadastrosPage() {
   const { generations, groupedValues } = await getCachedData(userId);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       
       <main className="container mx-auto px-4 pt-12">
         <div className="space-y-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                <Users className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
                 Pessoas & Dados
               </h1>
-              <p className="text-slate-500">
+              <p className="text-muted-foreground">
                 Visão global de todos os dados e campos extraídos vinculados a cada nome.
               </p>
             </div>

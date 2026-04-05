@@ -16,20 +16,29 @@ export const metadata: Metadata = {
     "Ferramentas para auxiliar o processo de produção cultural.",
 };
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <body className={`${outfit.className} antialiased`}>
-        <Suspense fallback={<div>Carregando aplicação...</div>}>
-          <ClerkProvider dynamic>
-            {children}
-            <Toaster richColors position="bottom-right" />
-          </ClerkProvider>
-        </Suspense>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Suspense fallback={<div>Carregando aplicação...</div>}>
+            <ClerkProvider dynamic>
+              {children}
+              <Toaster richColors position="bottom-right" />
+            </ClerkProvider>
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

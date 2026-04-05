@@ -39,7 +39,7 @@ export function DashboardFilter({ availableTags }: DashboardFilterProps) {
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
       <TagFilter
         availableTags={availableTags}
         selectedTags={selectedTags}

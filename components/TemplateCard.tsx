@@ -51,7 +51,7 @@ export function TemplateCard({ template, allAvailableTags }: TemplateCardProps) 
   };
 
   return (
-    <Card className="group hover:shadow-md transition-all border-slate-200 overflow-hidden flex flex-col">
+    <Card className="group hover:shadow-md transition-all border-border overflow-hidden flex flex-col">
       <CardHeader className="pb-3 relative">
         <div className="flex items-start justify-between">
           <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -63,7 +63,7 @@ export function TemplateCard({ template, allAvailableTags }: TemplateCardProps) 
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                className="text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                 disabled={isDeleting}
               >
                 <Trash2 className="w-4 h-4" />
@@ -79,7 +79,7 @@ export function TemplateCard({ template, allAvailableTags }: TemplateCardProps) 
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                <AlertDialogAction onClick={handleDelete} variant="destructive">
                   {isDeleting ? "Excluindo..." : "Sim, excluir"}
                 </AlertDialogAction>
               </AlertDialogFooter>

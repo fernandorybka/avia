@@ -116,19 +116,19 @@ export default async function HomePage(props: {
           <aside className="sticky top-28 space-y-6">
             <UploadTemplate />
             
-            <div className="p-6 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
+            <div className="p-6 rounded-2xl bg-accent text-accent-foreground shadow-xl shadow-accent/20">
               <h3 className="font-bold text-lg mb-4">Como funciona</h3>
-              <ul className="space-y-4 text-primary-foreground/90 text-sm">
+              <ul className="space-y-4 text-accent-foreground/90 text-sm">
                 <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs font-bold">1</span>
-                  <p>Envie um docx com marcadores <code className="bg-primary-foreground/10 px-1 rounded text-primary-foreground">##NOME##</code></p>
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">1</span>
+                  <p>Envie um docx com marcadores <code className="bg-accent-foreground/10 px-1 rounded text-accent-foreground">##NOME##</code></p>
                 </li>
                 <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs font-bold">2</span>
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">2</span>
                   <p>Os campos são extraídos automaticamente</p>
                 </li>
                 <li className="flex gap-4">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs font-bold">3</span>
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-accent-foreground/20 flex items-center justify-center text-xs font-bold">3</span>
                   <p>Preencha o formulário e salve as gerações</p>
                 </li>
               </ul>

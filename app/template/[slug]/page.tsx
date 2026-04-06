@@ -27,7 +27,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
     <div className="min-h-screen bg-background pb-20">
       <Header />
       
-      <main className="container mx-auto px-4 pt-12">
+      <main className="container mx-auto px-4 pt-28">
         <TemplateForm 
           templateId={template.id} 
           templateName={template.name} 

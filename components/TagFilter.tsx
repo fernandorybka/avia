@@ -17,7 +17,16 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
   const safeAvailableTags = availableTags || [];
   const safeSelectedTags = selectedTags || [];
   
-  if (safeAvailableTags.length === 0) return null;
+  if (safeAvailableTags.length === 0) {
+    return (
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-sm font-medium text-muted-foreground mr-2">Filtrar por:</span>
+        <span className="text-sm text-muted-foreground italic">
+          Crie tags nos seus modelos para poder filtrar por categoria.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap gap-2 items-center">

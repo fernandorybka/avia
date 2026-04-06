@@ -64,7 +64,7 @@ export default async function CadastrosPage() {
     <div className="min-h-screen bg-background pb-20">
       <Header />
       
-      <main className="container mx-auto px-4 pt-12">
+      <main className="container mx-auto px-4 pt-28">
         <div className="space-y-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">

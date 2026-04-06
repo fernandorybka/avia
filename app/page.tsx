@@ -48,19 +48,16 @@ export default async function HomePage() {
   await connection();
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       <Header />
       
-      <main className="container mx-auto px-4 pt-12">
+      <main className="container mx-auto px-4 pt-28">
         <div className="max-w-6xl mx-auto space-y-8">
           
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Painel de Modelos
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Gerencie seus modelos e gere documentos personalizados.
-            </p>
+            <div className="space-y-2">
+            {/* Elementos decorativos */}
+            <div className="absolute -right-20 -top-20 w-80 h-80 bg-[#ff3939]/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           </div>
 
           <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Carregando painel...</div>}>

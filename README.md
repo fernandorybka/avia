@@ -1,14 +1,12 @@
-# avia! 🚀
+# avia! 
 
-Welcome to **avia!**, the ultimate template-driven document generation platform. Built with speed, style, and a touch of magic, avia! helps you turn data into beautifully formatted documents in seconds.
-
-![avia! banner](https://raw.githubusercontent.com/fernandorybka/avia/main/public/logo-placeholder.png) *(Note: Replace with your actual logo/banner if available!)*
+Welcome to **avia!**, a template-driven document generation platform. 
 
 ---
 
 ## ✨ Features
 
-- **Template Management**: Upload and manage your `.docx` templates with ease.
+- **Template Management**: Upload and manage your `.doc` or `.docx` templates with ease.
 - **Dynamic Content**: Fill templates with real-time data using a sleek interface.
 - **Fast & Reliable**: Powered by the latest web technologies for a seamless experience.
 - **Dark Mode**: Because every pro developer loves a good dark theme. 🌙

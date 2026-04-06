@@ -139,96 +139,112 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-lg border-border">
-      <CardHeader className="border-b bg-muted/50 rounded-t-xl">
-        <CardTitle className="text-2xl font-bold text-foreground">{templateName}</CardTitle>
-        <CardDescription>
-          Preencha os campos abaixo para gerar um novo documento.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
-        
-        <div className="mb-8 p-4 bg-muted/50 rounded-xl border border-border">
-          <div className="space-y-2">
-            <Label htmlFor="profile-select" className="text-foreground font-semibold">
-              Carregar dados salvos
-            </Label>
-            <Select value={selectedProfile} onValueChange={setSelectedProfile}>
-              <SelectTrigger id="profile-select" className="w-full bg-background">
-                <SelectValue placeholder="Selecione um registro" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">-- Novo Preenchimento (Em branco) --</SelectItem>
-                {pastGenerations.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="relative">
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-card p-8 rounded-2xl shadow-2xl border border-border flex flex-col items-center gap-4 text-center max-w-xs mx-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-xl text-foreground">Gerando...</h3>
+              <p className="text-sm text-muted-foreground">Isso deve levar apenas alguns instantes.</p>
+            </div>
           </div>
         </div>
+      )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid sm:grid-cols-2 gap-6">
-            {placeholders.map((p, idx) => (
-              <div key={p.fieldKey} className="space-y-2 relative">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={p.fieldKey} className="text-foreground font-medium capitalize">
-                    {p.fieldKey.replace(/_/g, " ").toLowerCase()}
-                  </Label>
-                  <div className="flex items-center gap-2" title="Salvar este campo no banco de dados para a próxima vez">
-                    <span className="text-[10px] text-muted-foreground font-medium uppercase">Salvar</span>
-                    <Switch 
-                      checked={shouldSaveMap[p.fieldKey]} 
-                      onCheckedChange={(checked) => toggleSave(p.fieldKey, checked)}
-                      tabIndex={placeholders.length + 2 + idx}
-                    />
-                  </div>
-                </div>
-                
-                <Input
-                  id={p.fieldKey}
-                  placeholder={`Digite ${p.fieldKey.toLowerCase()}`}
-                  {...register(p.fieldKey)}
-                  className={errors[p.fieldKey] ? "border-destructive focus-visible:ring-destructive" : "border-input"}
-                  tabIndex={idx + 1}
-                />
-                
-                {errors[p.fieldKey] && (
-                  <p className="text-xs text-destructive font-medium">{errors[p.fieldKey]?.message as string}</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <Settings2 className="w-4 h-4" />
-              <span>Ajuste os dados e gere o documento abaixo.</span>
+      <Card className="w-full max-w-2xl mx-auto shadow-lg border-border">
+        <CardHeader className="border-b bg-muted/50 rounded-t-xl">
+          <CardTitle className="text-2xl font-bold text-foreground">{templateName}</CardTitle>
+          <CardDescription>
+            Preencha os campos abaixo para gerar um novo documento.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          
+          <div className="mb-8 p-4 bg-muted/50 rounded-xl border border-border">
+            <div className="space-y-2">
+              <Label htmlFor="profile-select" className="text-foreground font-semibold">
+                Carregar dados salvos
+              </Label>
+              <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+                <SelectTrigger id="profile-select" className="w-full bg-background">
+                  <SelectValue placeholder="Selecione um registro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">-- Novo Preenchimento (Em branco) --</SelectItem>
+                  {pastGenerations.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Button 
-                type="submit" 
-                size="lg" 
-                className="w-full sm:w-auto px-10 shadow-md hover:shadow-lg transition-all" 
-                disabled={isSubmitting}
-                tabIndex={placeholders.length + 1}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Salvar e Gerar
-                </>
-              )}
-            </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid sm:grid-cols-2 gap-6">
+              {placeholders.map((p, idx) => (
+                <div key={p.fieldKey} className="space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={p.fieldKey} className="text-foreground font-medium capitalize">
+                      {p.fieldKey.replace(/_/g, " ").toLowerCase()}
+                    </Label>
+                    <div className="flex items-center gap-2" title="Salvar este campo no banco de dados para a próxima vez">
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase">Salvar</span>
+                      <Switch 
+                        checked={shouldSaveMap[p.fieldKey]} 
+                        onCheckedChange={(checked) => toggleSave(p.fieldKey, checked)}
+                        tabIndex={placeholders.length + 2 + idx}
+                      />
+                    </div>
+                  </div>
+                  
+                  <Input
+                    id={p.fieldKey}
+                    placeholder={`Digite ${p.fieldKey.toLowerCase()}`}
+                    {...register(p.fieldKey)}
+                    className={errors[p.fieldKey] ? "border-destructive focus-visible:ring-destructive" : "border-input"}
+                    tabIndex={idx + 1}
+                  />
+                  
+                  {errors[p.fieldKey] && (
+                    <p className="text-xs text-destructive font-medium">{errors[p.fieldKey]?.message as string}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Settings2 className="w-4 h-4" />
+                <span>Ajuste os dados e gere o documento abaixo.</span>
+              </div>
+              <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full sm:w-auto px-10 shadow-md hover:shadow-lg transition-all" 
+                  disabled={isSubmitting}
+                  tabIndex={placeholders.length + 1}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Salvar e Gerar
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Geist } from "next/font/google";
+import { Outfit, Geist, Modak } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -7,13 +7,14 @@ import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const modak = Modak({ weight: '400', subsets: ['latin'], variable: '--font-modak' });
 
 const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Avia!",
+  title: "avia!",
   description:
-    "Ferramentas para auxiliar o processo de produção cultural.",
+    "Ferramentas para agilizar o processo de produção cultural.",
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -24,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn("font-sans", geist.variable, modak.variable)} suppressHydrationWarning>
       <body className={`${outfit.className} antialiased`}>
         <ThemeProvider
           attribute="class"

@@ -46,6 +46,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-logo: var(--font-modak);
   --radius: 0.625rem;
 }
 

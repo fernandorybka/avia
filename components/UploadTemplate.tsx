@@ -79,7 +79,7 @@ export function UploadTemplate() {
               <Plus className="w-5 h-5" />
             </div>
             <CardTitle className="pt-2">Novo Modelo</CardTitle>
-            <CardDescription>Adicionar novo .docx</CardDescription>
+            <CardDescription>Adicionar novo modelo (doc ou docx)</CardDescription>
           </CardHeader>
         </Card>
       </DialogTrigger>

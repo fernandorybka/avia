@@ -17,6 +17,7 @@ import { unstable_cache } from "next/cache";
 import { getAllUserTags } from "@/services/tag-actions";
 import { DashboardFilter } from "@/components/DashboardFilter";
 import { TemplateCard } from "@/components/TemplateCard";
+import { getTemplateWithDetails } from "@/services/template-services";
 
 async function TemplateList({ searchParams, allAvailableTags }: { 
   searchParams: { tags?: string }, 
@@ -40,6 +41,12 @@ async function TemplateList({ searchParams, allAvailableTags }: {
   );
 
   let allTemplates = await getCachedTemplates(userId);
+
+  // Prefetch details for all templates to warm up the cache
+  // This makes navigation to individual templates instant
+  await Promise.all(allTemplates.map(template => 
+    getTemplateWithDetails(template.slug, userId)
+  ));
 
   // Filter by tags if any selected (Additive OR logic)
   if (selectedTags.length > 0) {
@@ -91,7 +98,7 @@ export default async function HomePage(props: {
               Painel de Modelos
             </h1>
             <p className="text-lg text-muted-foreground">
-              Gerencie seus modelos docx e gere documentos personalizados.
+              Gerencie seus modelos e gere documentos personalizados.
             </p>
           </div>
 

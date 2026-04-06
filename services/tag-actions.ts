@@ -23,8 +23,7 @@ export async function updateTemplateTags(templateId: string, tags: string[]) {
       eq(templates.userId, userId)
     ));
 
-  // @ts-ignore
-  revalidateTag(`templates-${userId}`);
+  revalidateTag(`templates-${userId}`, 'max');
   revalidatePath("/");
   return { success: true };
 }

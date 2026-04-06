@@ -1,46 +1,34 @@
 import { db } from "@/db";
-import { templates } from "@/db/schema";
+import { templates as templatesTable } from "@/db/schema";
 import { Header } from "@/components/Header";
-import { UploadTemplate } from "@/components/UploadTemplate";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { FileText, ArrowRight } from "lucide-react";
 import { desc, eq } from "drizzle-orm";
 import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-
 import { Suspense } from "react";
-
 import { unstable_cache } from "next/cache";
-
 import { getAllUserTags } from "@/services/tag-actions";
-import { DashboardFilter } from "@/components/DashboardFilter";
-import { TemplateCard } from "@/components/TemplateCard";
+import { DashboardContainer } from "@/components/DashboardContainer";
 import { getTemplateWithDetails } from "@/services/template-services";
 
-async function TemplateList({ searchParams, allAvailableTags }: { 
-  searchParams: { tags?: string }, 
-  allAvailableTags: string[] 
-}) {
+async function DashboardContent() {
   const { userId } = await auth();
   if (!userId) return null;
 
-  const selectedTags = searchParams.tags ? searchParams.tags.split(",") : [];
+  const allAvailableTags = await getAllUserTags();
 
   const getCachedTemplates = unstable_cache(
     async (uid: string) => {
       return await db
         .select()
-        .from(templates)
-        .where(eq(templates.userId, uid))
-        .orderBy(desc(templates.createdAt));
+        .from(templatesTable)
+        .where(eq(templatesTable.userId, uid))
+        .orderBy(desc(templatesTable.createdAt));
     },
     [`templates-${userId}`],
     { tags: [`templates-${userId}`] }
   );
 
-  let allTemplates = await getCachedTemplates(userId);
+  const allTemplates = await getCachedTemplates(userId);
 
   // Prefetch details for all templates to warm up the cache
   // This makes navigation to individual templates instant
@@ -48,43 +36,16 @@ async function TemplateList({ searchParams, allAvailableTags }: {
     getTemplateWithDetails(template.slug, userId)
   ));
 
-  // Filter by tags if any selected (Additive OR logic)
-  if (selectedTags.length > 0) {
-    allTemplates = allTemplates.filter(template => 
-      selectedTags.some(tag => (template.tags || []).includes(tag))
-    );
-  }
-
-  if (allTemplates.length === 0) {
-    if (selectedTags.length > 0) {
-      return (
-        <div className="sm:col-span-1 p-8 text-center space-y-4 border rounded-xl bg-card shadow-sm flex flex-col items-center justify-center">
-          <FileText className="w-8 h-8 text-muted-foreground opacity-50" />
-          <p className="text-sm text-muted-foreground">Nenhum modelo com estas tags.</p>
-        </div>
-      );
-    }
-    return null; // Don't show anything extra if no templates, UploadTemplate is already there
-  }
-
   return (
-    <>
-      {allTemplates.map((template) => (
-        <TemplateCard 
-          key={template.id} 
-          template={template} 
-          allAvailableTags={allAvailableTags} 
-        />
-      ))}
-    </>
+    <DashboardContainer 
+      initialTemplates={allTemplates} 
+      allAvailableTags={allAvailableTags} 
+    />
   );
 }
 
-export default async function HomePage(props: { 
-  searchParams: Promise<{ tags?: string }> 
-}) {
-  const searchParams = await props.searchParams;
-  const allAvailableTags = await getAllUserTags();
+export default async function HomePage() {
+  await connection();
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -102,14 +63,9 @@ export default async function HomePage(props: {
             </p>
           </div>
 
-          <DashboardFilter availableTags={allAvailableTags} />
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <UploadTemplate />
-            <Suspense fallback={<div className="sm:col-span-1 lg:col-span-2 py-20 text-center text-muted-foreground">Carregando modelos...</div>}>
-              <TemplateList searchParams={searchParams} allAvailableTags={allAvailableTags} />
-            </Suspense>
-          </div>
+          <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Carregando painel...</div>}>
+            <DashboardContent />
+          </Suspense>
         </div>
       </main>
     </div>

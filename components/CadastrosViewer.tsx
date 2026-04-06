@@ -43,9 +43,14 @@ interface CadastrosViewerProps {
   groupedValues: Record<string, Value[]>;
 }
 
-export function CadastrosViewer({ generations, groupedValues }: CadastrosViewerProps) {
+export function CadastrosViewer({ 
+  generations: initialGenerations, 
+  groupedValues: initialGroupedValues 
+}: CadastrosViewerProps) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string>(generations[0]?.id || "");
+  const [generations, setGenerations] = useState<Generation[]>(initialGenerations);
+  const [groupedValues, setGroupedValues] = useState<Record<string, Value[]>>(initialGroupedValues);
+  const [selectedId, setSelectedId] = useState<string>(initialGenerations[0]?.id || "");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -56,8 +61,16 @@ export function CadastrosViewer({ generations, groupedValues }: CadastrosViewerP
     try {
       await deleteGenerationAction(selectedId);
       toast.success("Perfil excluído com sucesso.");
-      setSelectedId(generations.find(g => g.id !== selectedId)?.id || "");
-      router.refresh();
+      
+      const newGenerations = generations.filter(g => g.id !== selectedId);
+      setGenerations(newGenerations);
+      
+      // Update groupedValues by removing the deleted generation
+      const newGroupedValues = { ...groupedValues };
+      delete newGroupedValues[selectedId];
+      setGroupedValues(newGroupedValues);
+
+      setSelectedId(newGenerations[0]?.id || "");
       setShowDeleteDialog(false);
     } catch (error) {
       toast.error("Erro ao excluir perfil.");

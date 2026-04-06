@@ -59,8 +59,7 @@ export async function uploadTemplateAction(formData: FormData) {
     );
   }
 
-  // @ts-ignore - revalidateTag in some versions expects 2 args but works with 1 at runtime
-  revalidateTag(`templates-${userId}`);
+  revalidateTag(`templates-${userId}`, 'max');
   revalidatePath("/");
   revalidatePath("/cadastros");
   redirect(`/template/${template.slug}`);
@@ -119,8 +118,7 @@ export async function createGenerationAction(
 
   await Promise.all(upsertPromises);
 
-  // @ts-ignore
-  revalidateTag(`cadastros-${userId}`);
+  revalidateTag(`cadastros-${userId}`, 'max');
   revalidatePath("/cadastros");
   revalidatePath(`/template/${templateId}`);
 
@@ -143,8 +141,7 @@ export async function deleteGenerationAction(generationId: string) {
     eq(documentGenerations.userId, userId)
   ));
 
-  // @ts-ignore
-  revalidateTag(`cadastros-${userId}`);
+  revalidateTag(`cadastros-${userId}`, 'max');
   revalidatePath("/cadastros");
   return { success: true };
 }
@@ -157,8 +154,7 @@ export async function deleteTemplateAction(templateId: string) {
     eq(templates.userId, userId)
   ));
 
-  // @ts-ignore
-  revalidateTag(`templates-${userId}`);
+  revalidateTag(`templates-${userId}`, 'max');
   revalidatePath("/");
   revalidatePath("/cadastros");
   return { success: true };

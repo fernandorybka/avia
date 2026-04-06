@@ -30,9 +30,10 @@ interface TemplateCardProps {
     createdAt: Date;
   };
   allAvailableTags: string[];
+  onDelete?: (id: string) => void;
 }
 
-export function TemplateCard({ template, allAvailableTags }: TemplateCardProps) {
+export function TemplateCard({ template, allAvailableTags, onDelete }: TemplateCardProps) {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const router = useRouter();
 
@@ -41,7 +42,11 @@ export function TemplateCard({ template, allAvailableTags }: TemplateCardProps) 
     try {
       await deleteTemplateAction(template.id);
       toast.success("Modelo removido com sucesso.");
-      router.refresh();
+      if (onDelete) {
+        onDelete(template.id);
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       toast.error("Erro ao remover modelo.");
       console.error(error);

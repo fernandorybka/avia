@@ -22,7 +22,7 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
       <div className="flex flex-wrap gap-2 items-center">
         <span className="text-sm font-medium text-muted-foreground mr-2">Filtrar por:</span>
         <span className="text-sm text-muted-foreground italic">
-          Crie tags nos seus modelos para poder filtrar por categoria.
+          Crie etiquetas nos seus modelos para poder filtrar por categoria.
         </span>
       </div>
     );

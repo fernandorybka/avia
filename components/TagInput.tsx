@@ -44,7 +44,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
     try {
       await updateTemplateTags(templateId, newTags);
     } catch (error) {
-      toast.error("Erro ao atualizar tags.");
+      toast.error("Erro ao atualizar etiquetas.");
       setTags(tags); // Rollback
     }
   };
@@ -56,7 +56,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
     try {
       await updateTemplateTags(templateId, newTags);
     } catch (error) {
-      toast.error("Erro ao remover tag.");
+      toast.error("Erro ao remover etiqueta.");
       setTags(tags); // Rollback
     }
   };
@@ -83,13 +83,13 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
             className="h-8 border-dashed border-border text-muted-foreground hover:text-foreground"
           >
             <Plus className="w-4 h-4 mr-1" />
-            Adicionar Tag
+            Adicionar Etiqueta
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
             <CommandInput 
-              placeholder="Pesquisar tag..." 
+              placeholder="Pesquisar etiqueta..." 
               value={inputValue}
               onValueChange={setInputValue}
               onKeyDown={(e) => {

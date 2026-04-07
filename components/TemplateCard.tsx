@@ -56,7 +56,7 @@ export function TemplateCard({ template, allAvailableTags, onDelete }: TemplateC
   };
 
   return (
-    <Link href={`/template/${template.slug}`} className="block h-full">
+    <Link href={`/modelo/${template.slug}`} className="block h-full">
       <Card 
         className="group cursor-pointer hover:shadow-lg hover:border-primary/50 hover:bg-accent/5 transition-all border-border overflow-hidden flex flex-col relative h-full"
       >

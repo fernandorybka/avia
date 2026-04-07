@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getTemplateWithDetails } from "@/services/template-services";
 
-export default async function TemplatePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ModeloPage({ params }: { params: Promise<{ slug: string }> }) {
   await connection();
   const { userId } = await auth();
 

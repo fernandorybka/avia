@@ -7,11 +7,11 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 border-b bg-background/80 backdrop-blur-md z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-logo font-normal text-[3rem] tracking-tight flex items-baseline gap-1 text-[#ff3939] drop-shadow-sm hover:opacity-90 transition-opacity">
+        <Link href="/modelos" className="font-logo font-normal text-[3rem] tracking-tight flex items-baseline gap-1 text-[#ff3939] drop-shadow-sm hover:opacity-90 transition-opacity">
           avia!
         </Link>
         <nav className="flex items-center gap-4">
-          <Link href="/">
+          <Link href="/modelos">
             <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Modelos</Button>
           </Link>
           <Link href="/cadastros">

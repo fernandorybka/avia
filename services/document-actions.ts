@@ -60,9 +60,9 @@ export async function uploadTemplateAction(formData: FormData) {
   }
 
   revalidateTag(`templates-${userId}`, 'max');
-  revalidatePath("/");
+  revalidatePath("/modelos");
   revalidatePath("/cadastros");
-  redirect(`/template/${template.slug}`);
+  redirect(`/modelo/${template.slug}`);
 }
 
 
@@ -120,7 +120,7 @@ export async function createGenerationAction(
 
   revalidateTag(`cadastros-${userId}`, 'max');
   revalidatePath("/cadastros");
-  revalidatePath(`/template/${templateId}`);
+  revalidatePath(`/modelo/${templateId}`);
 
   return { success: true, generationId: generation.id };
 }
@@ -155,7 +155,7 @@ export async function deleteTemplateAction(templateId: string) {
   ));
 
   revalidateTag(`templates-${userId}`, 'max');
-  revalidatePath("/");
+  revalidatePath("/modelos");
   revalidatePath("/cadastros");
   return { success: true };
 }

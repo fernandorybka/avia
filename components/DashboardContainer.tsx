@@ -64,7 +64,7 @@ export function DashboardContainer({
         {filteredTemplates.length === 0 && selectedTags.length > 0 ? (
           <div className="sm:col-span-1 p-8 text-center space-y-4 border rounded-xl bg-card shadow-sm flex flex-col items-center justify-center">
             <FileText className="w-8 h-8 text-muted-foreground opacity-50" />
-            <p className="text-sm text-muted-foreground">Nenhum modelo com estas tags.</p>
+            <p className="text-sm text-muted-foreground">Nenhum modelo com estas etiquetas.</p>
           </div>
         ) : (
           filteredTemplates.map((template) => (

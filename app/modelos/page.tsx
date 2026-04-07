@@ -10,6 +10,7 @@ import { getAllUserTags } from "@/services/tag-actions";
 import { DashboardContainer } from "@/components/DashboardContainer";
 import { getTemplateWithDetails } from "@/services/template-services";
 import { FileText } from "lucide-react";
+import { WorkflowInfographic } from "@/components/WorkflowInfographic";
 
 async function DashboardContent() {
   const { userId } = await auth();
@@ -68,6 +69,8 @@ export default async function ModelosPage() {
               </p>
             </div>
           </div>
+
+          <WorkflowInfographic />
 
           <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Carregando painel...</div>}>
             <DashboardContent />

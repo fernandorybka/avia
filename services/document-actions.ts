@@ -7,23 +7,30 @@ import {
   documentGenerations, 
   documentGenerationValues 
 } from "@/db/schema";
-import { parseDocxPlaceholders } from "@/lib/docx-utils";
+import { parseDocxPlaceholders, normalizeDocxContent } from "@/lib/docx-utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
+import { sanitizeText, sanitizeRecord } from "@/lib/sanitize";
 
 
 export async function uploadTemplateAction(formData: FormData) {
   const file = formData.get("file") as File;
-  const name = formData.get("name") as string;
+  const rawName = formData.get("name") as string;
 
-  if (!file || !name) {
+  if (!file || !rawName) {
     throw new Error("File and name are required");
   }
 
+  const name = sanitizeText(rawName, 255);
+  if (!name) throw new Error("O nome do modelo é inválido.");
+
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  let buffer = Buffer.from(arrayBuffer) as Buffer;
+  
+  // Normalize wildcards within the document itself before saving
+  buffer = await normalizeDocxContent(buffer);
   
   const { text, placeholders } = await parseDocxPlaceholders(buffer);
 
@@ -68,8 +75,8 @@ export async function uploadTemplateAction(formData: FormData) {
 
 
 export async function createGenerationAction(
-  templateId: string, 
-  generationName: string,
+  templateId: string,
+  rawGenerationName: string,
   values: Record<string, string>,
   shouldSave: Record<string, boolean>
 ) {
@@ -77,6 +84,11 @@ export async function createGenerationAction(
   if (!userId) {
     throw new Error("Unauthorized");
   }
+
+  const generationName = sanitizeText(rawGenerationName, 255);
+  if (!generationName) throw new Error("O nome do cadastro é inválido.");
+
+  const sanitizedValues = sanitizeRecord(values);
 
   let [generation] = await db
     .select()
@@ -95,7 +107,7 @@ export async function createGenerationAction(
     generation = inserted[0];
   }
 
-  const upsertPromises = Object.entries(values).map(async ([fieldKey, fieldValue]) => {
+  const upsertPromises = Object.entries(sanitizedValues).map(async ([fieldKey, fieldValue]) => {
     if (!shouldSave[fieldKey]) {
       await db.delete(documentGenerationValues)
         .where(and(

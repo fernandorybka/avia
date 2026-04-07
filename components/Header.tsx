@@ -17,6 +17,9 @@ export function Header() {
           <Link href="/cadastros">
             <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Cadastros</Button>
           </Link>
+          <Link href="/ajuda">
+            <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Ajuda</Button>
+          </Link>
           <div className="ml-4 flex items-center gap-4 border-l pl-4 border-border">
             <ThemeToggle />
             <SignedIn>

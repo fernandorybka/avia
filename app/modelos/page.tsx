@@ -54,7 +54,7 @@ export default async function ModelosPage() {
       
       <main className="container mx-auto px-4 pt-28">
         <div className="max-w-6xl mx-auto space-y-8">
-          
+  
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                <FileText className="w-6 h-6" />

@@ -5,16 +5,14 @@ import { templates } from "@/db/schema";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
+import { sanitizeTags } from "@/lib/sanitize";
 
 export async function updateTemplateTags(templateId: string, tags: string[]) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  // Clean tags: trim and remove empty
-  const cleanTags = tags
-    .map(t => t.trim())
-    .filter(t => t.length > 0)
-    .filter((v, i, a) => a.indexOf(v) === i); // Unique
+  // Sanitize: remove control chars, strip empty, deduplicate, limit each tag to 100 chars
+  const cleanTags = sanitizeTags(tags);
 
   await db.update(templates)
     .set({ tags: cleanTags })

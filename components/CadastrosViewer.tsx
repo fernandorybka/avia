@@ -81,14 +81,6 @@ export function CadastrosViewer({
   };
 
 
-  if (generations.length === 0) {
-    return (
-      <div className="col-span-full py-16 text-center bg-card rounded-xl border border-border">
-        <p className="text-muted-foreground">Nenhum dado salvo. Crie documentos e marque "Salvar" para acumular perfis globais.</p>
-      </div>
-    );
-  }
-
   const selectedGen = generations.find(g => g.id === selectedId);
   
   const genValues = useMemo(() => {
@@ -102,6 +94,14 @@ export function CadastrosViewer({
       return a.fieldKey.localeCompare(b.fieldKey);
     });
   }, [selectedId, groupedValues]);
+
+  if (generations.length === 0) {
+    return (
+      <div className="col-span-full py-16 text-center bg-card rounded-xl border border-border max-w-2xl mx-auto">
+        <p className="text-muted-foreground">Nenhum dado salvo. Crie documentos e marque "Salvar" para acumular perfis globais.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

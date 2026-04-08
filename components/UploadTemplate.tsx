@@ -19,12 +19,18 @@ import { useState } from "react";
 import { FileUp, Loader2, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { TagSelector } from "./TagSelector";
 
-export function UploadTemplate() {
+interface UploadTemplateProps {
+  allAvailableTags: string[];
+}
+
+export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const validateAndSetFile = (file: File) => {
     setFileError(null);
@@ -70,6 +76,7 @@ export function UploadTemplate() {
       if (!open) {
         setSelectedFile(null);
         setFileError(null);
+        setSelectedTags([]);
       }
     }}>
       <DialogTrigger asChild>
@@ -108,14 +115,17 @@ export function UploadTemplate() {
               return;
             }
 
+            // Add tags to formData
+            selectedTags.forEach(tag => formData.append("tags", tag));
+
             try {
               setIsOpen(false);
               await uploadTemplateAction(formData);
               toast.success("Modelo enviado com sucesso!");
             } catch (error: any) {
-              // Ignore NEXT_REDIRECT errors as they are expected behavior for redirect()
+              // Re-throw NEXT_REDIRECT errors so Next.js can handle the redirect
               if (error?.message?.includes("NEXT_REDIRECT")) {
-                return;
+                throw error;
               }
               toast.error("Erro ao enviar modelo. Verifique se o arquivo é um .docx válido.");
               console.error(error);
@@ -132,6 +142,15 @@ export function UploadTemplate() {
                 placeholder="Ex: Contrato de Aluguel v2" 
                 required 
                 className="bg-muted/30"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Etiquetas</Label>
+              <TagSelector 
+                selectedTags={selectedTags} 
+                onChange={setSelectedTags} 
+                allAvailableTags={allAvailableTags}
               />
             </div>
             

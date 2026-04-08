@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DashboardFilter } from "./DashboardFilter";
 import { TemplateCard } from "./TemplateCard";
 import { UploadTemplate } from "./UploadTemplate";
@@ -28,6 +28,11 @@ export function DashboardContainer({
 }: DashboardContainerProps) {
   const [templates, setTemplates] = useState<Template[]>(initialTemplates);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Sync state with props when server provides new data (e.g. after revalidation)
+  useEffect(() => {
+    setTemplates(initialTemplates);
+  }, [initialTemplates]);
 
   const handleToggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -60,7 +65,7 @@ export function DashboardContainer({
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <UploadTemplate />
+        <UploadTemplate allAvailableTags={allAvailableTags} />
         {filteredTemplates.length === 0 && selectedTags.length > 0 ? (
           <div className="sm:col-span-1 p-8 text-center space-y-4 border rounded-xl bg-card shadow-sm flex flex-col items-center justify-center">
             <FileText className="w-8 h-8 text-muted-foreground opacity-50" />

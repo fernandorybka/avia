@@ -12,12 +12,13 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { sanitizeText, sanitizeRecord } from "@/lib/sanitize";
+import { sanitizeText, sanitizeRecord, sanitizeTags } from "@/lib/sanitize";
 
 
 export async function uploadTemplateAction(formData: FormData) {
   const file = formData.get("file") as File;
   const rawName = formData.get("name") as string;
+  const rawTags = formData.getAll("tags") as string[];
 
   if (!file || !rawName) {
     throw new Error("File and name are required");
@@ -25,6 +26,8 @@ export async function uploadTemplateAction(formData: FormData) {
 
   const name = sanitizeText(rawName, 255);
   if (!name) throw new Error("O nome do modelo é inválido.");
+
+  const tags = sanitizeTags(rawTags);
 
   const arrayBuffer = await file.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer) as Buffer;
@@ -53,6 +56,7 @@ export async function uploadTemplateAction(formData: FormData) {
     slug,
     userId,
     content: text,
+    tags,
     storageUrl: buffer.toString('base64'), // Mock storage, just store base64 for now
   }).returning();
 

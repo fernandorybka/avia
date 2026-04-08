@@ -1,30 +1,42 @@
 import mammoth from "mammoth";
+import PizZip from "pizzip";
 import { isValidWildcardKey, normalizeWildcardKey } from "@/lib/sanitize";
 
 export async function parseDocxPlaceholders(buffer: Buffer) {
   try {
-    const { value: text } = await mammoth.extractRawText({ buffer });
+    const cleanedBuffer = unsplitDocxTags(buffer);
+    const { value: text } = await mammoth.extractRawText({ buffer: cleanedBuffer });
+    const zip = new PizZip(cleanedBuffer);
+    const files = Object.keys(zip.files);
+    const targetXmlFiles = files.filter(
+      (filePath) =>
+        filePath.startsWith("word/") &&
+        filePath.endsWith(".xml") &&
+        !filePath.includes("/_rels/")
+    );
     
     // \p{L} = any Unicode letter (accents, tildes, ç, etc.), \p{N} = any Unicode digit
     const regex = /##([\p{L}\p{N}_ ]+)##/gu;
-    const matches = text.matchAll(regex);
     
     const placeholders = new Set<string>();
-    const fieldKeys = new Set<string>();
     
     // Always include NOME as per requirements
     placeholders.add("##NOME##");
-    fieldKeys.add("NOME");
 
-    for (const match of matches) {
-      const fullPlaceholder = match[0];
-      const key = match[1];
+    for (const xmlPath of targetXmlFiles) {
+      const file = zip.file(xmlPath);
+      if (!file) continue;
+      const cleanedXml = cleanXmlTags(file.asText());
 
-      // Skip keys that don't pass the validation rules
-      if (!isValidWildcardKey(key)) continue;
+      for (const match of cleanedXml.matchAll(regex)) {
+        const fullPlaceholder = match[0];
+        const key = match[1];
 
-      placeholders.add(fullPlaceholder);
-      fieldKeys.add(key);
+        // Skip keys that don't pass the validation rules
+        if (!isValidWildcardKey(key)) continue;
+
+        placeholders.add(fullPlaceholder);
+      }
     }
 
     return {
@@ -43,39 +55,106 @@ export async function parseDocxPlaceholders(buffer: Buffer) {
   }
 }
 
-import PizZip from "pizzip";
-import Docxtemplater from "docxtemplater";
+/**
+ * Removes XML tags that split wildcards (##TAG##).
+ * LibreOffice/Word often insert tags like <w:proofErr/> or </w:t><w:t>
+ * between characters of a wildcard, breaking docxtemplater.
+ */
+function cleanXmlTags(xml: string): string {
+  // Conservative cleanup: only join placeholders across inline run splits.
+  let result = xml.replace(/<w:proofErr [^>]*\/>/g, "");
+  result = result.replace(/<w:lang [^>]*\/>/g, "");
 
-export function generateDocx(buffer: Buffer, values: Record<string, string>): Buffer {
-  const zip = new PizZip(buffer);
+  const runBoundary = /<\/w:t><\/w:r><w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t[^>]*>/g;
+  let previous = "";
 
-  try {
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      delimiters: { start: "##", end: "##" }
-    });
+  while (previous !== result) {
+    previous = result;
 
-    doc.render(values);
+    // Fix split delimiters: # + boundary + # => ##
+    result = result.replace(/#<\/w:t><\/w:r><w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t[^>]*>#/g, "##");
 
-    return doc.getZip().generate({
-      type: "nodebuffer",
-      compression: "DEFLATE",
-    }) as Buffer;
-  } catch (error: any) {
-    // Docxtemplater throws structured errors with a `properties.errors` array
-    if (error?.properties?.errors?.length) {
-      const details = error.properties.errors
-        .map((e: any) => e?.properties?.explanation ?? e?.message ?? String(e))
-        .join("; ");
-      throw new Error(
-        `Erro de formatação no modelo: o documento contém wildcards malformados ou tags inválidas. Verifique se todos os campos seguem o padrão ##campo## (com ## dos dois lados e sem caracteres especiais). Detalhes: ${details}`
-      );
-    }
-    throw new Error(
-      "Erro ao processar o modelo. Verifique se o arquivo .docx está íntegro e se os wildcards estão corretamente formatados com ## dos dois lados."
+    // Fix placeholders split by one inline boundary at a time.
+    result = result.replace(
+      /##([^#<]*?)<\/w:t><\/w:r><w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t[^>]*>([^#]*?)##/g,
+      "##$1$2##"
     );
   }
+
+  // Extra safety: when a run boundary remains between delimiters, strip only that boundary.
+  result = result.replace(/##((?:(?!##).)*)##/g, (match) => match.replace(runBoundary, ""));
+
+  return result;
+}
+
+/**
+ * Processes all XML files in a DOCX buffer to unsplit wildcards.
+ */
+export function unsplitDocxTags(buffer: Buffer): Buffer {
+  const zip = new PizZip(buffer);
+  const files = Object.keys(zip.files);
+
+  // Keep scope tight to user-facing text containers.
+  const targetFiles = [
+    "word/document.xml",
+    ...files.filter((f) => f.startsWith("word/header") || f.startsWith("word/footer"))
+  ];
+
+  targetFiles.forEach(path => {
+    const file = zip.file(path);
+    if (!file) return;
+
+    const originalContent = file.asText();
+    const cleanedContent = cleanXmlTags(originalContent);
+    
+    if (originalContent !== cleanedContent) {
+      zip.file(path, cleanedContent);
+    }
+  });
+
+  return zip.generate({ type: "nodebuffer", compression: "DEFLATE" }) as Buffer;
+}
+
+export function generateDocx(buffer: Buffer, values: Record<string, string>): Buffer {
+  // Keep original XML structure during generation to avoid corrupting tables.
+  const zip = new PizZip(buffer);
+  const files = Object.keys(zip.files);
+  const targetXmlFiles = files.filter(
+    (filePath) =>
+      filePath.startsWith("word/") &&
+      filePath.endsWith(".xml") &&
+      !filePath.includes("/_rels/")
+  );
+
+  const placeholderRegex = /##([\p{L}\p{N}_ ]+)##/gu;
+  const valuesByNormalizedKey: Record<string, string> = {};
+
+  // Canonicalize incoming keys (e.g., MÊS / MES / MÊS ATUAL => same normalized key).
+  for (const [key, value] of Object.entries(values)) {
+    const normalizedKey = normalizeWildcardKey(key);
+    valuesByNormalizedKey[normalizedKey] = value;
+  }
+
+  for (const xmlPath of targetXmlFiles) {
+    const file = zip.file(xmlPath);
+    if (!file) continue;
+    let xml = file.asText();
+
+    xml = xml.replace(placeholderRegex, (fullMatch, rawKey: string) => {
+      if (!isValidWildcardKey(rawKey)) return fullMatch;
+      const normalizedPlaceholderKey = normalizeWildcardKey(rawKey);
+      const value = valuesByNormalizedKey[normalizedPlaceholderKey];
+      if (value === undefined) return fullMatch;
+      return escapeXmlText(value).replace(/\r\n|\r|\n/g, "</w:t><w:br/><w:t>");
+    });
+
+    zip.file(xmlPath, xml);
+  }
+
+  return zip.generate({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+  }) as Buffer;
 }
 
 /**
@@ -83,44 +162,16 @@ export function generateDocx(buffer: Buffer, values: Record<string, string>): Bu
  * Replaces tags like ##nome Máximo## with ##NOME_MAXIMO##.
  */
 export async function normalizeDocxContent(buffer: Buffer): Promise<Buffer> {
-  let currentBuffer = buffer;
-  const zip = new PizZip(currentBuffer);
-  
-  try {
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      delimiters: { start: "##", end: "##" }
-    });
+  // Disabled for safety: previous XML rewrites could break DOCX structure
+  // in some table-heavy templates. We normalize only in-memory keys now.
+  return buffer;
+}
 
-    const { value: text } = await mammoth.extractRawText({ buffer });
-    const regex = /##([\p{L}\p{N}_ ]+)##/gu;
-    const matches = Array.from(text.matchAll(regex));
-    
-    if (matches.length === 0) return buffer;
-
-    const normalizationMap: Record<string, string> = {};
-    for (const match of matches) {
-      const originalKey = match[1] as string;
-      if (isValidWildcardKey(originalKey)) {
-        const normalizedKey = normalizeWildcardKey(originalKey);
-        // We want to replace ##dirty## with ##CLEAN##
-        // docxtemplater will replace the content between delimiters
-        normalizationMap[originalKey] = `##${normalizedKey}##`;
-      }
-    }
-
-    if (Object.keys(normalizationMap).length === 0) return buffer;
-
-    doc.render(normalizationMap);
-
-    return doc.getZip().generate({
-      type: "nodebuffer",
-      compression: "DEFLATE",
-    }) as Buffer;
-  } catch (error) {
-    console.error("Error normalizing docx content:", error);
-    // If normalization fails, return original buffer as fallback
-    return buffer;
-  }
+function escapeXmlText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }

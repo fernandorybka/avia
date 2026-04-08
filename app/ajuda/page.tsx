@@ -1,4 +1,3 @@
-import { Header } from "@/components/Header";
 import { BookOpen, FileText, Lightbulb, AlertTriangle, CheckCircle2, ArrowRight, Hash } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -40,8 +39,6 @@ const steps = [
 export default function AjudaPage() {
   return (
     <div className="min-h-screen bg-background pb-28 overflow-x-hidden">
-      <Header />
-
       <main className="container mx-auto px-4 pt-28">
         <div className="max-w-4xl mx-auto space-y-16">
 

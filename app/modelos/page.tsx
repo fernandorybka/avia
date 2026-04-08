@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import { templates as templatesTable } from "@/db/schema";
-import { Header } from "@/components/Header";
 import { desc, eq } from "drizzle-orm";
 import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
@@ -51,8 +50,6 @@ export default async function ModelosPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
-      <Header />
-      
       <main className="container mx-auto px-4 pt-28">
         <div className="max-w-6xl mx-auto space-y-8">
   

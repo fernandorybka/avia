@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import { documentGenerations, documentGenerationValues } from "@/db/schema";
-import { Header } from "@/components/Header";
 import { eq, inArray } from "drizzle-orm";
 import { Users } from "lucide-react";
 import { connection } from "next/server";
@@ -62,8 +61,6 @@ export default async function CadastrosPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header />
-      
       <main className="container mx-auto px-4 pt-28">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center gap-4">

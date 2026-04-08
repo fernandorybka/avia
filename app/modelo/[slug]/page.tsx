@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Header } from "@/components/Header";
 import { TemplateForm } from "@/components/TemplateForm";
 import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
@@ -25,8 +24,6 @@ export default async function ModeloPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header />
-      
       <main className="container mx-auto px-4 pt-28">
         <TemplateForm 
           templateId={template.id} 

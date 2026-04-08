@@ -8,7 +8,7 @@ import {
   documentGenerationValues 
 } from "@/db/schema";
 import { parseDocxPlaceholders, normalizeDocxContent } from "@/lib/docx-utils";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
@@ -70,7 +70,7 @@ export async function uploadTemplateAction(formData: FormData) {
     );
   }
 
-  revalidateTag(`templates-${userId}`, 'max');
+  updateTag(`templates-${userId}`);
   revalidatePath("/modelos");
   revalidatePath("/cadastros");
   redirect(`/modelo/${template.slug}`);
@@ -134,7 +134,7 @@ export async function createGenerationAction(
 
   await Promise.all(upsertPromises);
 
-  revalidateTag(`cadastros-${userId}`, 'max');
+  updateTag(`cadastros-${userId}`);
   revalidatePath("/cadastros");
   revalidatePath(`/modelo/${templateId}`);
 
@@ -157,7 +157,7 @@ export async function deleteGenerationAction(generationId: string) {
     eq(documentGenerations.userId, userId)
   ));
 
-  revalidateTag(`cadastros-${userId}`, 'max');
+  updateTag(`cadastros-${userId}`);
   revalidatePath("/cadastros");
   return { success: true };
 }
@@ -170,7 +170,7 @@ export async function deleteTemplateAction(templateId: string) {
     eq(templates.userId, userId)
   ));
 
-  revalidateTag(`templates-${userId}`, 'max');
+  updateTag(`templates-${userId}`);
   revalidatePath("/modelos");
   revalidatePath("/cadastros");
   return { success: true };

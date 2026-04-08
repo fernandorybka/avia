@@ -26,7 +26,7 @@ async function DashboardContent() {
         .where(eq(templatesTable.userId, uid))
         .orderBy(desc(templatesTable.createdAt));
     },
-    [`templates-${userId}`],
+    ["templates-list"],
     { tags: [`templates-${userId}`] }
   );
 

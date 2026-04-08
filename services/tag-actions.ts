@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { templates } from "@/db/schema";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { sanitizeTags } from "@/lib/sanitize";
@@ -21,7 +21,7 @@ export async function updateTemplateTags(templateId: string, tags: string[]) {
       eq(templates.userId, userId)
     ));
 
-  revalidateTag(`templates-${userId}`, 'max');
+  updateTag(`templates-${userId}`);
   revalidatePath("/");
   return { success: true };
 }

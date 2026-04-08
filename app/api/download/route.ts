@@ -40,7 +40,10 @@ export async function GET(request: NextRequest) {
     const safeGenName = generation.name.replace(/[^a-zA-Z0-9]/g, '_');
     const filename = `${safeTemplateName}_${safeGenName}.docx`;
 
-    return new Response(docxBuffer, {
+    const body = new ArrayBuffer(docxBuffer.byteLength);
+    new Uint8Array(body).set(docxBuffer);
+
+    return new Response(body, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -5,7 +5,7 @@ import { uploadTemplateAction } from "@/services/document-actions";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "./ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -122,9 +122,9 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
               setIsOpen(false);
               await uploadTemplateAction(formData);
               toast.success("Modelo enviado com sucesso!");
-            } catch (error: any) {
+            } catch (error: unknown) {
               // Re-throw NEXT_REDIRECT errors so Next.js can handle the redirect
-              if (error?.message?.includes("NEXT_REDIRECT")) {
+              if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
                 throw error;
               }
               toast.error("Erro ao enviar modelo. Verifique se o arquivo é um .docx válido.");

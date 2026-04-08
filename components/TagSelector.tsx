@@ -90,7 +90,7 @@ export function TagSelector({ selectedTags, onChange, allAvailableTags }: TagSel
                   className="p-2 cursor-pointer hover:bg-muted flex items-center justify-between text-sm"
                   onClick={() => handleAddTag(inputValue)}
                 >
-                  Criar "{inputValue}"
+                  Criar &quot;{inputValue}&quot;
                   <Plus className="w-3 h-3 text-muted-foreground" />
                 </div>
               </CommandEmpty>

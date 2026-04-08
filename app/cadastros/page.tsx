@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { documentGenerations, documentGenerationValues } from "@/db/schema";
 import { Header } from "@/components/Header";
-import { desc, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { Users } from "lucide-react";
 import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";

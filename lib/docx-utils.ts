@@ -1,24 +1,20 @@
-import mammoth from "mammoth";
 import PizZip from "pizzip";
 import { isValidWildcardKey, normalizeWildcardKey } from "@/lib/sanitize";
 
+const BROAD_PLACEHOLDER_REGEX = /##((?:(?!##)[\s\S])*)##/gu;
+
 export async function parseDocxPlaceholders(buffer: Buffer) {
   try {
-    const cleanedBuffer = unsplitDocxTags(buffer);
-    const { value: text } = await mammoth.extractRawText({ buffer: cleanedBuffer });
-    const zip = new PizZip(cleanedBuffer);
+    const zip = new PizZip(buffer);
     const files = Object.keys(zip.files);
-    const targetXmlFiles = files.filter(
-      (filePath) =>
-        filePath.startsWith("word/") &&
-        filePath.endsWith(".xml") &&
-        !filePath.includes("/_rels/")
-    );
-    
-    // \p{L} = any Unicode letter (accents, tildes, ç, etc.), \p{N} = any Unicode digit
-    const regex = /##([\p{L}\p{N}_ ]+)##/gu;
+    const targetXmlFiles = files.filter((filePath) => {
+      if (!filePath.startsWith("word/") || !filePath.endsWith(".xml")) return false;
+      if (filePath.includes("/_rels/")) return false;
+      return /word\/(document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml$/.test(filePath);
+    });
     
     const placeholders = new Set<string>();
+    const extractedTextParts: string[] = [];
     
     // Always include NOME as per requirements
     placeholders.add("##NOME##");
@@ -26,34 +22,111 @@ export async function parseDocxPlaceholders(buffer: Buffer) {
     for (const xmlPath of targetXmlFiles) {
       const file = zip.file(xmlPath);
       if (!file) continue;
-      const cleanedXml = cleanXmlTags(file.asText());
+      const rawXml = file.asText();
+      const xmlText = extractVisibleTextFromXml(rawXml);
+      extractedTextParts.push(xmlText);
 
-      for (const match of cleanedXml.matchAll(regex)) {
-        const fullPlaceholder = match[0];
-        const key = match[1];
+      const xmlPlaceholders = extractPlaceholdersFromText(xmlText);
 
-        // Skip keys that don't pass the validation rules
-        if (!isValidWildcardKey(key)) continue;
-
-        placeholders.add(fullPlaceholder);
+      for (const placeholder of xmlPlaceholders) {
+        placeholders.add(placeholder);
       }
     }
 
+    const text = extractedTextParts
+      .join("\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    const parsedPlaceholders = Array.from(placeholders).map((p) => {
+      const key = p.replace(/##/g, "");
+      return {
+        placeholder: p,
+        fieldKey: normalizeWildcardKey(key),
+      };
+    });
+
     return {
       text,
-      placeholders: Array.from(placeholders).map(p => {
-        const key = p.replace(/##/g, "");
-        return {
-          placeholder: p,
-          fieldKey: normalizeWildcardKey(key)
-        };
-      })
+      placeholders: parsedPlaceholders,
     };
   } catch (error) {
     console.error("Error parsing docx:", error);
     throw new Error("Failed to parse .docx file. Ensure it is a valid format.");
   }
 }
+
+/**
+ * Extract placeholders from plain text rebuilt from DOCX XML.
+ */
+function extractPlaceholdersFromText(text: string): Set<string> {
+  const placeholders = new Set<string>();
+  const normalizedText = normalizeDelimiterNoise(text);
+
+  for (const match of normalizedText.matchAll(BROAD_PLACEHOLDER_REGEX)) {
+    const sanitized = sanitizeExtractedWildcardKey(match[1]);
+    if (!isValidWildcardKey(sanitized)) continue;
+    placeholders.add(`##${sanitized}##`);
+  }
+
+  return placeholders;
+}
+
+function normalizeDelimiterNoise(text: string): string {
+  const hashLikeChars = /[＃﹟#]/g;
+  let result = text.replace(hashLikeChars, "#");
+  const betweenHashes = /#(?:[\s\u00A0\u200B-\u200D\u2060\uFEFF])+#/g;
+  let previous = "";
+
+  while (result !== previous) {
+    previous = result;
+    result = result.replace(betweenHashes, "##");
+  }
+
+  return result;
+}
+
+function extractVisibleTextFromXml(xml: string): string {
+  let text = xml;
+
+  // Preserve structural separators before removing tags.
+  text = text.replace(/<w:tab\/>/g, "\t");
+  text = text.replace(/<w:(?:br|cr)\s*\/?>/g, "\n");
+  text = text.replace(/<\/w:p>/g, "\n");
+  text = text.replace(/<\/w:tr>/g, "\n");
+  text = text.replace(/<\/w:tc>/g, "\t");
+
+  // Keep only text content.
+  text = text.replace(/<[^>]+>/g, "");
+  text = decodeXmlEntities(text);
+
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/\t+/g, "\t")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)));
+}
+
+function sanitizeExtractedWildcardKey(key: string): string {
+  return key
+    .replace(/\u00A0/g, " ")
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/[\x00-\x1F\x7F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 
 /**
  * Removes XML tags that split wildcards (##TAG##).
@@ -126,7 +199,6 @@ export function generateDocx(buffer: Buffer, values: Record<string, string>): Bu
       !filePath.includes("/_rels/")
   );
 
-  const placeholderRegex = /##([\p{L}\p{N}_ ]+)##/gu;
   const valuesByNormalizedKey: Record<string, string> = {};
 
   // Canonicalize incoming keys (e.g., MÊS / MES / MÊS ATUAL => same normalized key).
@@ -140,9 +212,10 @@ export function generateDocx(buffer: Buffer, values: Record<string, string>): Bu
     if (!file) continue;
     let xml = file.asText();
 
-    xml = xml.replace(placeholderRegex, (fullMatch, rawKey: string) => {
-      if (!isValidWildcardKey(rawKey)) return fullMatch;
-      const normalizedPlaceholderKey = normalizeWildcardKey(rawKey);
+    xml = xml.replace(BROAD_PLACEHOLDER_REGEX, (fullMatch, rawKey: string) => {
+      const sanitizedKey = sanitizeExtractedWildcardKey(rawKey);
+      if (!isValidWildcardKey(sanitizedKey)) return fullMatch;
+      const normalizedPlaceholderKey = normalizeWildcardKey(sanitizedKey);
       const value = valuesByNormalizedKey[normalizedPlaceholderKey];
       if (value === undefined) return fullMatch;
       return escapeXmlText(value).replace(/\r\n|\r|\n/g, "</w:t><w:br/><w:t>");

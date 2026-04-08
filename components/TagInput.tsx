@@ -43,7 +43,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
 
     try {
       await updateTemplateTags(templateId, newTags);
-    } catch (error) {
+    } catch {
       toast.error("Erro ao atualizar etiquetas.");
       setTags(tags); // Rollback
     }
@@ -55,7 +55,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
 
     try {
       await updateTemplateTags(templateId, newTags);
-    } catch (error) {
+    } catch {
       toast.error("Erro ao remover etiqueta.");
       setTags(tags); // Rollback
     }
@@ -104,7 +104,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
                   className="p-2 cursor-pointer hover:bg-muted flex items-center justify-between text-sm"
                   onClick={() => handleAddTag(inputValue)}
                 >
-                  Criar "{inputValue}"
+                  Criar &quot;{inputValue}&quot;
                   <Plus className="w-3 h-3 text-muted-foreground" />
                 </div>
               </CommandEmpty>

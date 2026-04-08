@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { templates, documentGenerations, documentGenerationValues } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { generateDocx } from "@/lib/docx-utils";
 import { NextRequest } from "next/server";
 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const safeGenName = generation.name.replace(/[^a-zA-Z0-9]/g, '_');
     const filename = `${safeTemplateName}_${safeGenName}.docx`;
 
-    return new Response(docxBuffer as any, {
+    return new Response(docxBuffer, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

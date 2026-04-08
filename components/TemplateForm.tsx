@@ -9,7 +9,7 @@ import { Label } from "./ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "./ui/card";
 import { createGenerationAction, fetchGenerationValuesAction } from "@/services/document-actions";
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, CheckCircle2, Save, Settings2 } from "lucide-react";
+import { Loader2, CheckCircle2, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
@@ -34,7 +34,6 @@ interface TemplateFormProps {
 
 export function TemplateForm({ templateId, templateName, placeholders: initialPlaceholders, pastGenerations = [] }: TemplateFormProps) {
   const router = useRouter();
-  // Memoize sorted placeholders to avoid infinite re-renders in useEffect
   const placeholders = useMemo(() => {
     return [...initialPlaceholders].sort((a, b) => {
       const isANome = a.fieldKey.toUpperCase() === "NOME";
@@ -89,7 +88,7 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
     }
     loadValues();
     return () => { active = false; };
-  }, [selectedProfile, reset]); // Removed placeholders and pastGenerations from deps to avoid loops
+  }, [selectedProfile, pastGenerations, placeholders, reset]);
 
   const toggleSave = (fieldKey: string, value?: boolean) => {
     setShouldSaveMap(prev => ({

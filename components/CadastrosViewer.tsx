@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { UserCircle2, Key, Calendar, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { deleteGenerationAction } from "@/services/document-actions";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -47,7 +46,6 @@ export function CadastrosViewer({
   generations: initialGenerations, 
   groupedValues: initialGroupedValues 
 }: CadastrosViewerProps) {
-  const router = useRouter();
   const [generations, setGenerations] = useState<Generation[]>(initialGenerations);
   const [groupedValues, setGroupedValues] = useState<Record<string, Value[]>>(initialGroupedValues);
   const [selectedId, setSelectedId] = useState<string>(initialGenerations[0]?.id || "");
@@ -98,7 +96,7 @@ export function CadastrosViewer({
   if (generations.length === 0) {
     return (
       <div className="col-span-full py-16 text-center bg-card rounded-xl border border-border max-w-2xl mx-auto">
-        <p className="text-muted-foreground">Nenhum dado salvo. Crie documentos e marque "Salvar" para acumular perfis globais.</p>
+        <p className="text-muted-foreground">Nenhum dado salvo. Crie documentos e marque &quot;Salvar&quot; para acumular perfis globais.</p>
       </div>
     );
   }

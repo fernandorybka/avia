@@ -232,6 +232,13 @@
 
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
+  }
+
+  @supports not (scrollbar-gutter: stable) {
+    html {
+      overflow-y: scroll;
+    }
   }
 }
 

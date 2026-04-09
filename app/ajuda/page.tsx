@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Lightbulb, AlertTriangle, CheckCircle2, ArrowRight, Hash } from "lucide-react";
+import { BookOpen, FileText, Lightbulb, AlertTriangle, CheckCircle2, ArrowRight, Hash, LifeBuoy } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ZoomImage } from "./zoom-image";
@@ -221,9 +221,13 @@ export default function AjudaPage() {
 
           {/* CTA */}
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="space-y-1">
+            <div className="space-y-2">
               <h3 className="font-bold text-foreground text-lg">Pronto para começar?</h3>
               <p className="text-sm text-muted-foreground">Envie seu primeiro modelo e comece a gerar documentos em segundos.</p>
+              <a href="mailto:fernando.pr@gmail.com?subject=Contato%20via%20avia!" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline underline-offset-4">
+                <LifeBuoy className="w-4 h-4" />
+                Precisa de ajuda? Fale conosco
+              </a>
             </div>
             <Link href="/modelos">
               <Button size="lg" className="px-8 shadow-md hover:shadow-lg transition-all whitespace-nowrap">

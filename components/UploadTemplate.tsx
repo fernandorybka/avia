@@ -40,8 +40,8 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
     }
     
     const extension = file.name.split('.').pop()?.toLowerCase();
-    if (extension !== 'docx' && extension !== 'doc') {
-      setFileError("Apenas arquivos .doc e .docx são suportados.");
+    if (extension !== 'docx') {
+      setFileError("Apenas arquivos .docx são suportados.");
       return false;
     }
 
@@ -86,7 +86,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
               <Plus className="w-5 h-5" />
             </div>
             <CardTitle className="pt-2">Novo Modelo</CardTitle>
-            <CardDescription>Adicionar novo modelo (doc ou docx)</CardDescription>
+            <CardDescription>Adicionar novo modelo (.docx)</CardDescription>
           </CardHeader>
         </Card>
       </DialogTrigger>
@@ -102,6 +102,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
         </DialogHeader>
         
         <form 
+          autoComplete="off"
           action={async (formData) => {
             const fileInForm = formData.get("file") as File;
             
@@ -110,7 +111,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
               formData.set("file", selectedFile);
             }
 
-            if (!formData.get("name") || !(formData.get("file") as File)?.size) {
+            if (!formData.get("templateName") || !(formData.get("file") as File)?.size) {
               setFileError("Nome e arquivo são obrigatórios.");
               return;
             }
@@ -119,7 +120,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
             selectedTags.forEach(tag => formData.append("tags", tag));
 
             try {
-              setIsOpen(false);
+              setFileError(null);
               await uploadTemplateAction(formData);
               toast.success("Modelo enviado com sucesso!");
             } catch (error: unknown) {
@@ -130,6 +131,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
               const message = error instanceof Error
                 ? error.message
                 : "Ops, deu um soluço no envio. Tente novamente em instantes.";
+              setFileError(message);
               toast.error(message);
               console.error(error);
             }
@@ -138,11 +140,12 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
         >
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-semibold">Nome do Modelo</Label>
+              <Label htmlFor="templateName" className="text-sm font-semibold">Nome do Modelo</Label>
               <Input 
-                id="name" 
-                name="name" 
-                placeholder="Ex: Contrato de Aluguel v2" 
+                id="templateName" 
+                name="templateName" 
+                placeholder="Ex: Carta de Anuência Pessoa Física" 
+                autoComplete="section-template organization-title"
                 required 
                 className="bg-muted/30"
               />
@@ -174,7 +177,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
                   id="file-input"
                   name="file"
                   type="file" 
-                  accept=".docx,.doc" 
+                  accept=".docx" 
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -191,7 +194,7 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
                     {selectedFile ? selectedFile.name : (isDragging ? "Solte para enviar" : "Arraste ou clique")}
                   </p>
                   <p className="text-[0.7rem] text-muted-foreground mt-1">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Máximo 1MB (.doc/.docx)"}
+                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Máximo 1MB (.docx)"}
                   </p>
                 </div>
 

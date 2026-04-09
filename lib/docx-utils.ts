@@ -38,13 +38,21 @@ export async function parseDocxPlaceholders(buffer: Buffer) {
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
-    const parsedPlaceholders = Array.from(placeholders).map((p) => {
+    const placeholdersByFieldKey = new Map<string, { placeholder: string; fieldKey: string }>();
+
+    for (const p of placeholders) {
       const key = p.replace(/##/g, "");
-      return {
-        placeholder: p,
-        fieldKey: normalizeWildcardKey(key),
-      };
-    });
+      const fieldKey = normalizeWildcardKey(key);
+
+      if (!placeholdersByFieldKey.has(fieldKey)) {
+        placeholdersByFieldKey.set(fieldKey, {
+          placeholder: p,
+          fieldKey,
+        });
+      }
+    }
+
+    const parsedPlaceholders = Array.from(placeholdersByFieldKey.values());
 
     return {
       text,
@@ -52,8 +60,49 @@ export async function parseDocxPlaceholders(buffer: Buffer) {
     };
   } catch (error) {
     console.error("Error parsing docx:", error);
-    throw new Error("Failed to parse .docx file. Ensure it is a valid format.");
+    throw new Error(
+      "Nao foi possivel ler o arquivo .docx. Verifique se o documento nao esta corrompido e tente novamente."
+    );
   }
+}
+
+export async function validateDocxTemplateFormatting(buffer: Buffer): Promise<{
+  isValid: boolean;
+  unresolvedPlaceholders: string[];
+  invalidPlaceholders: string[];
+  hasDanglingDelimiters: boolean;
+}> {
+  const parsed = await parseDocxPlaceholders(buffer);
+  const probeValues: Record<string, string> = {};
+
+  parsed.placeholders.forEach((item, index) => {
+    probeValues[item.fieldKey] = `__AVIA_PROBE_${index}__`;
+  });
+
+  const probeBuffer = generateDocx(buffer, probeValues);
+  const probeParsed = await parseDocxPlaceholders(probeBuffer);
+  const normalizedProbeText = normalizeDelimiterNoise(probeParsed.text);
+  const unresolved = new Set<string>();
+  const invalid = new Set<string>();
+
+  for (const match of normalizedProbeText.matchAll(BROAD_PLACEHOLDER_REGEX)) {
+    const sanitized = sanitizeExtractedWildcardKey(match[1]);
+    if (!isValidWildcardKey(sanitized)) {
+      if (sanitized) invalid.add(sanitized);
+      continue;
+    }
+    unresolved.add(normalizeWildcardKey(sanitized));
+  }
+
+  const delimiterCount = normalizedProbeText.match(/##/g)?.length ?? 0;
+  const hasDanglingDelimiters = delimiterCount % 2 !== 0;
+
+  return {
+    isValid: unresolved.size === 0 && invalid.size === 0 && !hasDanglingDelimiters,
+    unresolvedPlaceholders: Array.from(unresolved),
+    invalidPlaceholders: Array.from(invalid),
+    hasDanglingDelimiters,
+  };
 }
 
 /**
@@ -120,6 +169,7 @@ function decodeXmlEntities(value: string): string {
 
 function sanitizeExtractedWildcardKey(key: string): string {
   return key
+    .replace(/<[^>]+>/g, "")
     .replace(/\u00A0/g, " ")
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
     .replace(/[\x00-\x1F\x7F]/g, "")

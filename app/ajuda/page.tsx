@@ -21,8 +21,8 @@ const steps = [
   },
   {
     number: "03",
-    title: "Salve como .docx ou .doc",
-    description: "Salve o arquivo no formato .docx ou .doc. O avia! só aceita este formato para garantir a compatibilidade com o sistema de substituição.",
+    title: "Salve como .docx",
+    description: "Salve o arquivo no formato .docx. O avia! aceita apenas .docx para garantir a compatibilidade com o sistema de substituição.",
   },
   {
     number: "04",

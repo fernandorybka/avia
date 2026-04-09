@@ -183,7 +183,7 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
             </div>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
             <div className="grid sm:grid-cols-2 gap-6">
               {placeholders.map((p, idx) => (
                 <div key={p.fieldKey} className="space-y-2 relative">
@@ -204,6 +204,7 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
                   <Input
                     id={p.fieldKey}
                     placeholder={`Digite ${p.fieldKey.toLowerCase()}`}
+                    autoComplete="off"
                     {...register(p.fieldKey)}
                     className={errors[p.fieldKey] ? "border-destructive focus-visible:ring-destructive" : "border-input"}
                     tabIndex={idx + 1}

@@ -76,6 +76,7 @@ export function TagSelector({ selectedTags, onChange, allAvailableTags }: TagSel
             <CommandInput 
               placeholder="Pesquisar etiqueta..." 
               value={inputValue}
+              autoComplete="off"
               onValueChange={setInputValue}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && inputValue) {

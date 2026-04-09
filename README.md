@@ -12,7 +12,7 @@ Check out the working at: [https://avia-navy.vercel.app/](https://avia-navy.verc
 
 ## ✨ Features
 
-- **Template Management**: Upload and manage your `.doc` or `.docx` templates with ease.
+- **Template Management**: Upload and manage your `.docx` templates with ease.
 - **Dynamic Content**: Fill templates with real-time data using a sleek interface.
 - **Fast & Reliable**: Powered by the latest web technologies for a seamless experience.
 - **Dark Mode**: Because every pro developer loves a good dark theme. 🌙

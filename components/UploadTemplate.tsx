@@ -127,7 +127,10 @@ export function UploadTemplate({ allAvailableTags }: UploadTemplateProps) {
               if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
                 throw error;
               }
-              toast.error("Erro ao enviar modelo. Verifique se o arquivo é um .docx válido.");
+              const message = error instanceof Error
+                ? error.message
+                : "Ops, deu um soluço no envio. Tente novamente em instantes.";
+              toast.error(message);
               console.error(error);
             }
           }} 

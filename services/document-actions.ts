@@ -13,6 +13,12 @@ import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { sanitizeText, sanitizeRecord, sanitizeTags } from "@/lib/sanitize";
+import {
+  deleteTemplateFromR2,
+  getR2KeyFromPointer,
+  makeR2Pointer,
+  uploadTemplateToR2,
+} from "@/lib/r2";
 
 
 export async function uploadTemplateAction(formData: FormData) {
@@ -28,6 +34,9 @@ export async function uploadTemplateAction(formData: FormData) {
   if (!name) throw new Error("O nome do modelo é inválido.");
 
   const tags = sanitizeTags(rawTags);
+
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
 
   const arrayBuffer = await file.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer) as Buffer;
@@ -48,8 +57,21 @@ export async function uploadTemplateAction(formData: FormData) {
   const randomSuffix = Math.random().toString(36).substring(2, 6);
   slug = `${slug}-${randomSuffix}`;
 
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  let r2Key: string;
+  try {
+    r2Key = await uploadTemplateToR2({
+      userId,
+      slug,
+      originalFilename: file.name,
+      buffer,
+      contentType: file.type || undefined,
+    });
+  } catch (error) {
+    console.error("Erro ao enviar modelo para o R2:", error);
+    throw new Error(
+      "Ops, o armazenamento deu uma tropeçada. Não foi possível enviar seu modelo agora. Verifique a configuração do R2 e tente novamente."
+    );
+  }
 
   const [template] = await db.insert(templates).values({
     name,
@@ -57,7 +79,7 @@ export async function uploadTemplateAction(formData: FormData) {
     userId,
     content: text,
     tags,
-    storageUrl: buffer.toString('base64'), // Mock storage, just store base64 for now
+    storageUrl: makeR2Pointer(r2Key),
   }).returning();
 
   if (placeholders.length > 0) {
@@ -164,6 +186,26 @@ export async function deleteGenerationAction(generationId: string) {
 export async function deleteTemplateAction(templateId: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  const [template] = await db
+    .select({ storageUrl: templates.storageUrl })
+    .from(templates)
+    .where(and(eq(templates.id, templateId), eq(templates.userId, userId)))
+    .limit(1);
+
+  if (!template) {
+    throw new Error("Template não encontrado.");
+  }
+
+  if (!template.storageUrl) {
+    throw new Error("Template sem referencia de armazenamento no R2.");
+  }
+
+  try {
+    await deleteTemplateFromR2(getR2KeyFromPointer(template.storageUrl));
+  } catch (error) {
+    console.error("Erro ao remover arquivo do R2:", error);
+  }
 
   await db.delete(templates).where(and(
     eq(templates.id, templateId),

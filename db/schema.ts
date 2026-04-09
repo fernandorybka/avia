@@ -6,7 +6,7 @@ export const templates = pgTable("templates", {
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   content: text("content"), // Extracted raw text for rendering/preview
-  storageUrl: text("storage_url"), // URL or Base64 of the original docx
+  storageUrl: text("storage_url"), // R2 pointer (r2:key) or legacy Base64
   tags: text("tags").array().notNull().default([]), // List of tags for filtering
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -3,6 +3,7 @@ import { templates, documentGenerations, documentGenerationValues } from "@/db/s
 import { eq } from "drizzle-orm";
 import { generateDocx } from "@/lib/docx-utils";
 import { NextRequest } from "next/server";
+import { getR2KeyFromPointer, getTemplateBufferFromR2 } from "@/lib/r2";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +34,8 @@ export async function GET(request: NextRequest) {
       return new Response("Template buffer is missing", { status: 500 });
     }
 
-    const buffer = Buffer.from(template.storageUrl, "base64");
+    const buffer = await getTemplateBufferFromR2(getR2KeyFromPointer(template.storageUrl));
+
     const docxBuffer = generateDocx(buffer, valuesRecord);
 
     const safeTemplateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');

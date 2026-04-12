@@ -91,6 +91,33 @@ export async function uploadTemplateToR2(params: {
   return key;
 }
 
+export async function uploadPreparedTemplateToR2(params: {
+  slug: string;
+  originalFilename: string;
+  buffer: Buffer;
+  contentType?: string;
+  ownerUserId?: string | null;
+}): Promise<string> {
+  const client = getR2Client();
+  const bucket = getBucketName();
+  const cleanName = sanitizeFilename(params.originalFilename || "template.docx");
+  const audienceFolder = params.ownerUserId ? `users/${params.ownerUserId}` : "public";
+  const key = `prepared-templates/${audienceFolder}/${params.slug}-${randomUUID()}-${cleanName}`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: params.buffer,
+      ContentType:
+        params.contentType ??
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    })
+  );
+
+  return key;
+}
+
 export async function getTemplateBufferFromR2(key: string): Promise<Buffer> {
   const client = getR2Client();
   const bucket = getBucketName();

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, varchar, unique, boolean } from "drizzle-orm/pg-core";
 
 export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -35,3 +35,22 @@ export const documentGenerationValues = pgTable("document_generation_values", {
 }, (t) => [
   unique().on(t.generationId, t.fieldKey)
 ]);
+
+export const preparedTemplateCategories = pgTable("prepared_template_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  path: text("path").notNull().unique(),
+  pathKey: text("path_key").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const preparedTemplates = pgTable("prepared_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  categoryId: uuid("category_id").references(() => preparedTemplateCategories.id, { onDelete: "set null" }),
+  storageUrl: text("storage_url").notNull(),
+  isPublic: boolean("is_public").notNull().default(true),
+  ownerUserId: varchar("owner_user_id", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

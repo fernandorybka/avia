@@ -1,5 +1,6 @@
 import PizZip from "pizzip";
 import { isValidWildcardKey, normalizeWildcardKey } from "@/lib/sanitize";
+import { resolveCanonicalWildcardKey } from "@/lib/wildcard-catalog";
 
 const BROAD_PLACEHOLDER_REGEX = /##((?:(?!##)[\s\S])*)##/gu;
 
@@ -42,7 +43,7 @@ export async function parseDocxPlaceholders(buffer: Buffer) {
 
     for (const p of placeholders) {
       const key = p.replace(/##/g, "");
-      const fieldKey = normalizeWildcardKey(key);
+      const fieldKey = resolveCanonicalWildcardKey(normalizeWildcardKey(key));
 
       if (!placeholdersByFieldKey.has(fieldKey)) {
         placeholdersByFieldKey.set(fieldKey, {
@@ -253,7 +254,7 @@ export function generateDocx(buffer: Buffer, values: Record<string, string>): Bu
 
   // Canonicalize incoming keys (e.g., MÊS / MES / MÊS ATUAL => same normalized key).
   for (const [key, value] of Object.entries(values)) {
-    const normalizedKey = normalizeWildcardKey(key);
+    const normalizedKey = resolveCanonicalWildcardKey(normalizeWildcardKey(key));
     valuesByNormalizedKey[normalizedKey] = value;
   }
 
@@ -265,7 +266,7 @@ export function generateDocx(buffer: Buffer, values: Record<string, string>): Bu
     xml = xml.replace(BROAD_PLACEHOLDER_REGEX, (fullMatch, rawKey: string) => {
       const sanitizedKey = sanitizeExtractedWildcardKey(rawKey);
       if (!isValidWildcardKey(sanitizedKey)) return fullMatch;
-      const normalizedPlaceholderKey = normalizeWildcardKey(sanitizedKey);
+      const normalizedPlaceholderKey = resolveCanonicalWildcardKey(normalizeWildcardKey(sanitizedKey));
       const value = valuesByNormalizedKey[normalizedPlaceholderKey];
       if (value === undefined) return fullMatch;
       return escapeXmlText(value).replace(/\r\n|\r|\n/g, "</w:t><w:br/><w:t>");
@@ -288,6 +289,71 @@ export async function normalizeDocxContent(buffer: Buffer): Promise<Buffer> {
   // Disabled for safety: previous XML rewrites could break DOCX structure
   // in some table-heavy templates. We normalize only in-memory keys now.
   return buffer;
+}
+
+const SLOT_REGEX = /_{3,}/g;
+
+export function extractDocxSlotSummary(buffer: Buffer): {
+  textWithSlots: string;
+  slotCount: number;
+} {
+  const zip = new PizZip(buffer);
+  const files = Object.keys(zip.files);
+  const targetXmlFiles = files.filter((filePath) => {
+    if (!filePath.startsWith("word/") || !filePath.endsWith(".xml")) return false;
+    if (filePath.includes("/_rels/")) return false;
+    return /word\/(document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml$/.test(filePath);
+  });
+
+  let slotIndex = 0;
+  const parts: string[] = [];
+
+  for (const xmlPath of targetXmlFiles) {
+    const file = zip.file(xmlPath);
+    if (!file) continue;
+    const xml = file.asText();
+    const textWithMarkers = extractVisibleTextFromXml(xml).replace(SLOT_REGEX, () => {
+      slotIndex += 1;
+      return `[SLOT_${slotIndex}]`;
+    });
+    parts.push(textWithMarkers);
+  }
+
+  return {
+    textWithSlots: parts.join("\n\n").replace(/\n{3,}/g, "\n\n").trim(),
+    slotCount: slotIndex,
+  };
+}
+
+export function applyDocxSlotWildcards(buffer: Buffer, slotKeys: string[]): Buffer {
+  const zip = new PizZip(buffer);
+  const files = Object.keys(zip.files);
+  const targetXmlFiles = files.filter((filePath) => {
+    if (!filePath.startsWith("word/") || !filePath.endsWith(".xml")) return false;
+    if (filePath.includes("/_rels/")) return false;
+    return /word\/(document|header\d*|footer\d*|footnotes|endnotes|comments)\.xml$/.test(filePath);
+  });
+
+  let slotIndex = 0;
+
+  for (const xmlPath of targetXmlFiles) {
+    const file = zip.file(xmlPath);
+    if (!file) continue;
+    let xml = file.asText();
+
+    xml = xml.replace(/<w:t[^>]*>[\s\S]*?<\/w:t>/g, (textNode) => {
+      return textNode.replace(SLOT_REGEX, (slotMatch) => {
+        const key = slotKeys[slotIndex];
+        slotIndex += 1;
+        if (!key) return slotMatch;
+        return `##${resolveCanonicalWildcardKey(key)}##`;
+      });
+    });
+
+    zip.file(xmlPath, xml);
+  }
+
+  return zip.generate({ type: "nodebuffer", compression: "DEFLATE" }) as Buffer;
 }
 
 function escapeXmlText(value: string): string {

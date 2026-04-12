@@ -42,7 +42,8 @@ export function sanitizeRecord(
     if (cleanKey) {
       // Normalize to match template placeholders (uppercase, no accents, underscores)
       const normalizedKey = normalizeWildcardKey(cleanKey);
-      result[normalizedKey] = sanitizeText(value, maxLength);
+      const canonicalKey = resolveCanonicalWildcardKey(normalizedKey);
+      result[canonicalKey] = sanitizeText(value, maxLength);
     }
   }
   return result;
@@ -94,3 +95,4 @@ export function normalizeWildcardKey(key: string): string {
     .toUpperCase()
     .replace(/ /g, "_");
 }
+import { resolveCanonicalWildcardKey } from "@/lib/wildcard-catalog";

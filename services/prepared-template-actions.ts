@@ -14,11 +14,131 @@ import {
   uploadPreparedTemplateToR2,
 } from "@/lib/r2";
 import {
+  applyDocxSlotWildcards,
+  extractDocxSlotSummary,
   normalizeDocxContent,
   parseDocxPlaceholders,
   validateDocxTemplateFormatting,
 } from "@/lib/docx-utils";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
+import { getTemplateSuggestionProvider } from "@/lib/ai/template-suggester";
+import { resolveCanonicalWildcardKey } from "@/lib/wildcard-catalog";
+
+type SlotSuggestionPreview = {
+  slot: number;
+  fieldKey: string;
+  confidence: number;
+  reason?: string;
+  context: string;
+};
+
+const KEEP_BLANK_SLOT_TOKEN = "__KEEP_BLANK__";
+
+function validateDocxFile(file: File) {
+  if (!file || !(file.name || "").toLowerCase().endsWith(".docx")) {
+    throw new Error("Formato não suportado. Envie apenas arquivos .docx.");
+  }
+}
+
+function extractSlotContexts(textWithSlots: string, slotCount: number): Record<number, string> {
+  const contexts: Record<number, string> = {};
+  const normalized = textWithSlots.replace(/\s+/g, " ").trim();
+
+  for (let i = 1; i <= slotCount; i += 1) {
+    const marker = `[SLOT_${i}]`;
+    const idx = normalized.indexOf(marker);
+    if (idx < 0) {
+      contexts[i] = "";
+      continue;
+    }
+    const left = Math.max(0, idx - 60);
+    const right = Math.min(normalized.length, idx + marker.length + 60);
+    contexts[i] = normalized.slice(left, right).trim();
+  }
+
+  return contexts;
+}
+
+function parseSlotFieldKeysJson(raw: string): string[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error("Mapeamento de slots inválido (JSON malformado).");
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Mapeamento de slots inválido (esperado: array).");
+  }
+
+  return parsed.map((item, index) => {
+    const key = String(item ?? "").trim();
+    if (key === KEEP_BLANK_SLOT_TOKEN) {
+      return "";
+    }
+    if (!key) return `CAMPO_${index + 1}`;
+    return resolveCanonicalWildcardKey(key);
+  });
+}
+
+async function maybePrepareTemplateWithAi(buffer: Buffer, mode: string, predefinedSlotKeys?: string[]): Promise<Buffer> {
+  if (mode !== "ai") {
+    return buffer;
+  }
+
+  const { textWithSlots, slotCount } = extractDocxSlotSummary(buffer);
+
+  if (slotCount === 0) {
+    throw new Error(
+      "Não encontrei lacunas com sublinhado (_____) no documento original para converter em coringas automaticamente."
+    );
+  }
+
+  let slotKeys = predefinedSlotKeys;
+
+  if (!slotKeys || slotKeys.length === 0) {
+    const provider = getTemplateSuggestionProvider();
+    const suggestions = await provider.suggestSlotKeys({ textWithSlots, slotCount });
+    slotKeys = suggestions.map((item) => item.fieldKey);
+  }
+
+  return applyDocxSlotWildcards(buffer, slotKeys);
+}
+
+export async function suggestPreparedTemplateSlotsAction(formData: FormData): Promise<{ suggestions: SlotSuggestionPreview[] }> {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const file = formData.get("file") as File;
+  validateDocxFile(file);
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer) as Buffer;
+  const { textWithSlots, slotCount } = extractDocxSlotSummary(buffer);
+
+  if (slotCount === 0) {
+    throw new Error("Não encontrei lacunas com sublinhado (_____) para sugerir coringas.");
+  }
+
+  const provider = getTemplateSuggestionProvider();
+  const suggestions = await provider.suggestSlotKeys({ textWithSlots, slotCount });
+  const contexts = extractSlotContexts(textWithSlots, slotCount);
+
+  return {
+    suggestions: suggestions.map((item) => ({
+      slot: item.slot,
+      fieldKey: item.fieldKey,
+      confidence: item.confidence,
+      reason: item.reason,
+      context: contexts[item.slot] ?? "",
+    })),
+  };
+}
 
 function buildSlug(name: string): string {
   const base = name
@@ -43,14 +163,14 @@ export async function createPreparedTemplateAction(formData: FormData) {
   const rawName = (formData.get("name") as string) ?? "";
   const rawDescription = (formData.get("description") as string) ?? "";
   const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
+  const preparationMode = ((formData.get("preparationMode") as string) ?? "manual").toLowerCase();
+  const rawSlotFieldKeysJson = (formData.get("slotFieldKeysJson") as string) ?? "";
 
   if (!file || !rawName) {
     throw new Error("Arquivo e nome são obrigatórios.");
   }
 
-  if (!(file.name || "").toLowerCase().endsWith(".docx")) {
-    throw new Error("Formato não suportado. Envie apenas arquivos .docx.");
-  }
+  validateDocxFile(file);
 
   const name = sanitizeText(rawName, 255);
   if (!name) {
@@ -68,7 +188,9 @@ export async function createPreparedTemplateAction(formData: FormData) {
 
   const arrayBuffer = await file.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer) as Buffer;
+  const slotFieldKeys = parseSlotFieldKeysJson(rawSlotFieldKeysJson);
 
+  buffer = await maybePrepareTemplateWithAi(buffer, preparationMode, slotFieldKeys);
   buffer = await normalizeDocxContent(buffer);
   await parseDocxPlaceholders(buffer);
   const formattingCheck = await validateDocxTemplateFormatting(buffer);
@@ -110,23 +232,63 @@ export async function createPreparedTemplateAction(formData: FormData) {
   }
 
   try {
-    const [category] = await db
-      .insert(preparedTemplateCategories)
-      .values({
-        path: categoryPath,
-        pathKey: categoryPathKey,
-      })
-      .onConflictDoUpdate({
-        target: preparedTemplateCategories.pathKey,
-        set: { path: categoryPath },
-      })
-      .returning({ id: preparedTemplateCategories.id });
+    const [existingCategory] = await db
+      .select({ id: preparedTemplateCategories.id, path: preparedTemplateCategories.path })
+      .from(preparedTemplateCategories)
+      .where(
+        or(
+          eq(preparedTemplateCategories.pathKey, categoryPathKey),
+          eq(preparedTemplateCategories.path, categoryPath)
+        )
+      )
+      .limit(1);
+
+    let categoryId: string;
+
+    if (!existingCategory) {
+      try {
+        const [insertedCategory] = await db
+          .insert(preparedTemplateCategories)
+          .values({
+            path: categoryPath,
+            pathKey: categoryPathKey,
+          })
+          .returning({ id: preparedTemplateCategories.id });
+
+        categoryId = insertedCategory.id;
+      } catch {
+        const [categoryAfterConflict] = await db
+          .select({ id: preparedTemplateCategories.id })
+          .from(preparedTemplateCategories)
+          .where(
+            or(
+              eq(preparedTemplateCategories.pathKey, categoryPathKey),
+              eq(preparedTemplateCategories.path, categoryPath)
+            )
+          )
+          .limit(1);
+
+        if (!categoryAfterConflict) {
+          throw new Error("Não foi possível resolver a categoria do modelo pronto.");
+        }
+
+        categoryId = categoryAfterConflict.id;
+      }
+    } else {
+      categoryId = existingCategory.id;
+      if (existingCategory.path !== categoryPath) {
+        await db
+          .update(preparedTemplateCategories)
+          .set({ path: categoryPath })
+          .where(eq(preparedTemplateCategories.id, existingCategory.id));
+      }
+    }
 
     await db.insert(preparedTemplates).values({
       slug,
       name,
       description,
-      categoryId: category.id,
+      categoryId,
       storageUrl: makeR2Pointer(r2Key),
       isPublic: true,
       ownerUserId: null,

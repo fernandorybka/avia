@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Eye, EyeOff, ShieldCheck, Upload, Trash2 } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminPreparedTemplateForm } from "@/components/AdminPreparedTemplateForm";
 import {
   Table,
   TableBody,
@@ -13,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import {
-  createPreparedTemplateAction,
   deletePreparedTemplateAction,
   setPreparedTemplateVisibilityAction,
 } from "@/services/prepared-template-actions";
@@ -85,83 +85,10 @@ export default async function AdminPreparedTemplatesPage({ searchParams }: Props
 
           <section className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Novo modelo pronto</h2>
-
-            <form action={createPreparedTemplateAction} className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Nome
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  required
-                  maxLength={255}
-                  className="w-full h-10 rounded-md border bg-background px-3 text-sm"
-                  placeholder="Ex.: Contrato padrão de cessão"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="file" className="text-sm font-medium text-foreground">
-                  Arquivo (.docx)
-                </label>
-                <input
-                  id="file"
-                  name="file"
-                  type="file"
-                  accept=".docx"
-                  required
-                  className="w-full h-10 rounded-md border bg-background px-3 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="categoryPath" className="text-sm font-medium text-foreground">
-                  Categoria
-                </label>
-                <input
-                  id="categoryPath"
-                  name="categoryPath"
-                  required
-                  maxLength={255}
-                  list="prepared-template-categories"
-                  className="w-full h-10 rounded-md border bg-background px-3 text-sm"
-                  placeholder="Ex.: Editais > Lei Paulo Gustavo > 2026"
-                />
-                <datalist id="prepared-template-categories">
-                  {categoryPaths.map((path) => (
-                    <option key={path} value={path} />
-                  ))}
-                </datalist>
-                <p className="text-xs text-muted-foreground">
-                  Use &quot;&gt;&quot; para níveis hierárquicos. Você pode escolher uma existente ou criar nova.
-                </p>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <label htmlFor="description" className="text-sm font-medium text-foreground">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  maxLength={1000}
-                  rows={3}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  placeholder="Contexto rápido para quem vai baixar este modelo"
-                />
-              </div>
-
-              <div className="md:col-span-2 flex items-center gap-3">
-                <Button type="submit">
-                  <Upload className="w-4 h-4" />
-                  Publicar modelo pronto
-                </Button>
-                <Link href="/modelos-prontos" className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
-                  Ver página pública
-                </Link>
-              </div>
-            </form>
+            <AdminPreparedTemplateForm categoryPaths={categoryPaths} />
+            <Link href="/modelos-prontos" className="inline-flex text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
+              Ver página pública
+            </Link>
           </section>
 
           <section className="rounded-xl border bg-card shadow-sm overflow-hidden">

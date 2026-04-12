@@ -19,6 +19,7 @@ Try it at: [https://avia-navy.vercel.app/](https://avia-navy.vercel.app/)
 - **Template Management**: Upload and manage `.docx` templates.
 - **Dynamic Content**: Fill templates with real-time data.
 - **Document Generation**: Generate ready-to-download documents from saved templates.
+- **Admin AI Preparation**: Convert edital originals with blank lines (`_____`) into wildcard-ready templates.
 - **Fast UX**: Built with a modern Next.js stack.
 
 ---
@@ -96,6 +97,18 @@ R2_BUCKET_NAME=avia-modelos
 R2_ENDPOINT=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=your-r2-access-key-id
 R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+```
+
+Optional AI variables (admin flow for prepared templates):
+
+```bash
+AI_TEMPLATE_PROVIDER=groq
+GROQ_API_KEY=your-groq-api-key
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# optional alternative provider
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
 ### 4) Push database schema

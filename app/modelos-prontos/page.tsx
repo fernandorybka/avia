@@ -52,6 +52,7 @@ function CategoryBranch({
   level: number;
 }) {
   const childEntries = Object.entries(node.children).sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
+  const sortedTemplates = [...node.templates].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   const headingClass = level === 0 ? "text-xl" : level === 1 ? "text-lg" : "text-base";
   const sectionCount = node.templates.length + childEntries.length;
 
@@ -73,16 +74,14 @@ function CategoryBranch({
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Descrição</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {node.templates.map((template) => (
+              {sortedTemplates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell className="max-w-[32rem] truncate">{template.description || "-"}</TableCell>
                   <TableCell>{new Date(template.createdAt).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell className="text-right">
                     <PreparedTemplateDownloadButton templateId={template.id} />

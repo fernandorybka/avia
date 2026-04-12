@@ -47,7 +47,6 @@ export const preparedTemplates = pgTable("prepared_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
-  description: text("description"),
   categoryId: uuid("category_id").references(() => preparedTemplateCategories.id, { onDelete: "set null" }),
   storageUrl: text("storage_url").notNull(),
   isPublic: boolean("is_public").notNull().default(true),

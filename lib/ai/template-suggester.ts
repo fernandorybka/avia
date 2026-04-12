@@ -11,18 +11,28 @@ export type SlotSuggestion = {
   reason?: string;
 };
 
+export type SlotSuggestionResult = {
+  slots: SlotSuggestion[];
+  suggestedTemplateName: string;
+};
+
 export interface TemplateSuggestionProvider {
-  suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestion[]>;
+  suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestionResult>;
 }
 
 class MockSuggestionProvider implements TemplateSuggestionProvider {
-  async suggestSlotKeys(input: { slotCount: number }): Promise<SlotSuggestion[]> {
-    return Array.from({ length: input.slotCount }, (_, i) => ({
+  async suggestSlotKeys(input: { slotCount: number }): Promise<SlotSuggestionResult> {
+    const slots = Array.from({ length: input.slotCount }, (_, i) => ({
       slot: i + 1,
       fieldKey: i === 0 ? "NOME" : `CAMPO_${i + 1}`,
       confidence: 0.5,
       reason: "Mock provider",
     }));
+
+    return {
+      slots,
+      suggestedTemplateName: "Modelo de Documento",
+    };
   }
 }
 
@@ -35,7 +45,7 @@ class GeminiSuggestionProvider implements TemplateSuggestionProvider {
     this.model = model;
   }
 
-  async suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestion[]> {
+  async suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestionResult> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
     const canonicalKeys = getCanonicalWildcardKeys();
     const allowedKeysHint = canonicalKeys.join(", ");
@@ -46,7 +56,7 @@ class GeminiSuggestionProvider implements TemplateSuggestionProvider {
       "Sua tarefa é sugerir o fieldKey canônico para cada SLOT.",
       "Regras:",
       "1) Responda SOMENTE JSON válido.",
-      "2) Use este formato exato: {\"slots\":[{\"slot\":1,\"fieldKey\":\"NOME\",\"confidence\":0.91,\"reason\":\"...\"}]}",
+      "2) Use este formato exato: {\"modelName\":\"Nome curto do modelo\",\"slots\":[{\"slot\":1,\"fieldKey\":\"NOME\",\"confidence\":0.91,\"reason\":\"...\"}]}",
       "3) confidence deve ser número entre 0 e 1.",
       "4) Prefira sempre padronização canônica e reutilizável.",
       `5) Quando possível, escolha entre estes fieldKeys canônicos: ${allowedKeysHint}`,
@@ -102,9 +112,12 @@ class GeminiSuggestionProvider implements TemplateSuggestionProvider {
           reason,
         } satisfies SlotSuggestion;
       })
-      .filter((item): item is SlotSuggestion => item !== null);
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
-    return fillMissingSlots(normalized, input.slotCount);
+    return {
+      slots: fillMissingSlots(normalized, input.slotCount),
+      suggestedTemplateName: sanitizeSuggestedModelName(parsed?.modelName, input.textWithSlots),
+    };
   }
 }
 
@@ -117,7 +130,7 @@ class GroqSuggestionProvider implements TemplateSuggestionProvider {
     this.model = model;
   }
 
-  async suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestion[]> {
+  async suggestSlotKeys(input: { textWithSlots: string; slotCount: number }): Promise<SlotSuggestionResult> {
     const url = "https://api.groq.com/openai/v1/chat/completions";
     const canonicalKeys = getCanonicalWildcardKeys();
     const allowedKeysHint = canonicalKeys.join(", ");
@@ -128,7 +141,7 @@ class GroqSuggestionProvider implements TemplateSuggestionProvider {
       "Sua tarefa é sugerir o fieldKey canônico para cada SLOT.",
       "Regras:",
       "1) Responda SOMENTE JSON válido.",
-      "2) Use este formato exato: {\"slots\":[{\"slot\":1,\"fieldKey\":\"NOME\",\"confidence\":0.91,\"reason\":\"...\"}]}",
+      "2) Use este formato exato: {\"modelName\":\"Nome curto do modelo\",\"slots\":[{\"slot\":1,\"fieldKey\":\"NOME\",\"confidence\":0.91,\"reason\":\"...\"}]}",
       "3) confidence deve ser número entre 0 e 1.",
       "4) Prefira sempre padronização canônica e reutilizável.",
       `5) Quando possível, escolha entre estes fieldKeys canônicos: ${allowedKeysHint}`,
@@ -196,9 +209,12 @@ class GroqSuggestionProvider implements TemplateSuggestionProvider {
           reason,
         } satisfies SlotSuggestion;
       })
-      .filter((item): item is SlotSuggestion => item !== null);
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
-    return fillMissingSlots(normalized, input.slotCount);
+    return {
+      slots: fillMissingSlots(normalized, input.slotCount),
+      suggestedTemplateName: sanitizeSuggestedModelName(parsed?.modelName, input.textWithSlots),
+    };
   }
 }
 
@@ -246,6 +262,33 @@ function parseJsonPayload(raw: string): Record<string, unknown> | null {
   }
 
   return null;
+}
+
+function sanitizeSuggestedModelName(candidate: unknown, textWithSlots: string): string {
+  const fromModel = typeof candidate === "string" ? normalizeSuggestedModelName(candidate) : "";
+  if (fromModel) {
+    return fromModel.slice(0, 255);
+  }
+
+  const fallbackLine = textWithSlots
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\[SLOT_\d+\]/g, "").replace(/[_#]+/g, "").trim())
+    .find((line) => line.length >= 8);
+
+  if (fallbackLine) {
+    return fallbackLine.slice(0, 255);
+  }
+
+  return "Modelo de Documento";
+}
+
+function normalizeSuggestedModelName(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z\p{L}\d])([A-Z\p{Lu}])/gu, "$1 $2")
+    .replace(/(\p{Lu})(\p{Lu}\p{Ll})/gu, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function getTemplateSuggestionProvider(): TemplateSuggestionProvider {

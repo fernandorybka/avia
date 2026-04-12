@@ -20,7 +20,7 @@ import {
   parseDocxPlaceholders,
   validateDocxTemplateFormatting,
 } from "@/lib/docx-utils";
-import { eq, or } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { getTemplateSuggestionProvider } from "@/lib/ai/template-suggester";
 import { resolveCanonicalWildcardKey } from "@/lib/wildcard-catalog";
 
@@ -30,6 +30,14 @@ type SlotSuggestionPreview = {
   confidence: number;
   reason?: string;
   context: string;
+};
+
+type BatchSuggestionItem = {
+  index: number;
+  originalFilename: string;
+  suggestedName: string;
+  suggestions: SlotSuggestionPreview[];
+  error?: string;
 };
 
 const KEEP_BLANK_SLOT_TOKEN = "__KEEP_BLANK__";
@@ -101,14 +109,68 @@ async function maybePrepareTemplateWithAi(buffer: Buffer, mode: string, predefin
 
   if (!slotKeys || slotKeys.length === 0) {
     const provider = getTemplateSuggestionProvider();
-    const suggestions = await provider.suggestSlotKeys({ textWithSlots, slotCount });
-    slotKeys = suggestions.map((item) => item.fieldKey);
+    const result = await provider.suggestSlotKeys({ textWithSlots, slotCount });
+    slotKeys = result.slots.map((item) => item.fieldKey);
   }
 
   return applyDocxSlotWildcards(buffer, slotKeys);
 }
 
-export async function suggestPreparedTemplateSlotsAction(formData: FormData): Promise<{ suggestions: SlotSuggestionPreview[] }> {
+function buildSlug(name: string): string {
+  const base = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${base || "modelo-pronto"}-${suffix}`;
+}
+
+function parseBatchPayload(raw: string): Array<{ index: number; name: string; slotFieldKeys: string[] }> {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error("Payload de publicação em lote inválido (JSON malformado).");
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Payload de publicação em lote inválido (esperado: array).");
+  }
+
+  return parsed.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new Error("Payload de publicação em lote inválido.");
+    }
+
+    const obj = item as Record<string, unknown>;
+    const index = Number(obj.index);
+    const name = sanitizeText(String(obj.name ?? ""), 255);
+    const slotFieldKeysRaw = JSON.stringify(obj.slotFieldKeys ?? []);
+    const slotFieldKeys = parseSlotFieldKeysJson(slotFieldKeysRaw);
+
+    if (!Number.isInteger(index) || index < 0) {
+      throw new Error("Payload de publicação em lote contém índice inválido.");
+    }
+
+    return {
+      index,
+      name,
+      slotFieldKeys,
+    };
+  });
+}
+
+export async function suggestPreparedTemplateSlotsAction(formData: FormData): Promise<{
+  suggestedName: string;
+  suggestions: SlotSuggestionPreview[];
+}> {
   const isAdmin = await isCurrentUserAdmin();
   if (!isAdmin) {
     throw new Error("Unauthorized");
@@ -126,11 +188,12 @@ export async function suggestPreparedTemplateSlotsAction(formData: FormData): Pr
   }
 
   const provider = getTemplateSuggestionProvider();
-  const suggestions = await provider.suggestSlotKeys({ textWithSlots, slotCount });
+  const result = await provider.suggestSlotKeys({ textWithSlots, slotCount });
   const contexts = extractSlotContexts(textWithSlots, slotCount);
 
   return {
-    suggestions: suggestions.map((item) => ({
+    suggestedName: result.suggestedTemplateName,
+    suggestions: result.slots.map((item) => ({
       slot: item.slot,
       fieldKey: item.fieldKey,
       confidence: item.confidence,
@@ -140,17 +203,118 @@ export async function suggestPreparedTemplateSlotsAction(formData: FormData): Pr
   };
 }
 
-function buildSlug(name: string): string {
-  const base = name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
+export async function suggestPreparedTemplateBatchAction(formData: FormData): Promise<{ items: BatchSuggestionItem[] }> {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
 
-  const suffix = Math.random().toString(36).slice(2, 6);
-  return `${base || "modelo-pronto"}-${suffix}`;
+  const files = formData.getAll("files") as File[];
+  if (files.length === 0) {
+    throw new Error("Envie ao menos um arquivo .docx.");
+  }
+
+  const provider = getTemplateSuggestionProvider();
+
+  const items = await Promise.all(
+    files.map(async (file, index) => {
+      try {
+        validateDocxFile(file);
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer) as Buffer;
+        const { textWithSlots, slotCount } = extractDocxSlotSummary(buffer);
+
+        if (slotCount === 0) {
+          return {
+            index,
+            originalFilename: file.name,
+            suggestedName: "",
+            suggestions: [],
+            error: "Não encontrei lacunas com sublinhado (_____) neste arquivo.",
+          } satisfies BatchSuggestionItem;
+        }
+
+        const result = await provider.suggestSlotKeys({ textWithSlots, slotCount });
+        const contexts = extractSlotContexts(textWithSlots, slotCount);
+
+        return {
+          index,
+          originalFilename: file.name,
+          suggestedName: result.suggestedTemplateName,
+          suggestions: result.slots.map((item) => ({
+            slot: item.slot,
+            fieldKey: item.fieldKey,
+            confidence: item.confidence,
+            reason: item.reason,
+            context: contexts[item.slot] ?? "",
+          })),
+        } satisfies BatchSuggestionItem;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro ao analisar arquivo.";
+        return {
+          index,
+          originalFilename: file.name,
+          suggestedName: "",
+          suggestions: [],
+          error: message,
+        } satisfies BatchSuggestionItem;
+      }
+    })
+  );
+
+  return { items };
+}
+
+async function resolvePreparedTemplateCategoryId(categoryPath: string, categoryPathKey: string): Promise<string> {
+  const [existingCategory] = await db
+    .select({ id: preparedTemplateCategories.id, path: preparedTemplateCategories.path })
+    .from(preparedTemplateCategories)
+    .where(
+      or(
+        eq(preparedTemplateCategories.pathKey, categoryPathKey),
+        eq(preparedTemplateCategories.path, categoryPath)
+      )
+    )
+    .limit(1);
+
+  if (existingCategory) {
+    if (existingCategory.path !== categoryPath) {
+      await db
+        .update(preparedTemplateCategories)
+        .set({ path: categoryPath })
+        .where(eq(preparedTemplateCategories.id, existingCategory.id));
+    }
+    return existingCategory.id;
+  }
+
+  try {
+    const [insertedCategory] = await db
+      .insert(preparedTemplateCategories)
+      .values({
+        path: categoryPath,
+        pathKey: categoryPathKey,
+      })
+      .returning({ id: preparedTemplateCategories.id });
+
+    return insertedCategory.id;
+  } catch {
+    const [categoryAfterConflict] = await db
+      .select({ id: preparedTemplateCategories.id })
+      .from(preparedTemplateCategories)
+      .where(
+        or(
+          eq(preparedTemplateCategories.pathKey, categoryPathKey),
+          eq(preparedTemplateCategories.path, categoryPath)
+        )
+      )
+      .limit(1);
+
+    if (!categoryAfterConflict) {
+      throw new Error("Não foi possível resolver a categoria do modelo pronto.");
+    }
+
+    return categoryAfterConflict.id;
+  }
 }
 
 export async function createPreparedTemplateAction(formData: FormData) {
@@ -161,7 +325,6 @@ export async function createPreparedTemplateAction(formData: FormData) {
 
   const file = formData.get("file") as File;
   const rawName = (formData.get("name") as string) ?? "";
-  const rawDescription = (formData.get("description") as string) ?? "";
   const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
   const preparationMode = ((formData.get("preparationMode") as string) ?? "manual").toLowerCase();
   const rawSlotFieldKeysJson = (formData.get("slotFieldKeysJson") as string) ?? "";
@@ -177,7 +340,6 @@ export async function createPreparedTemplateAction(formData: FormData) {
     throw new Error("Nome do modelo inválido.");
   }
 
-  const description = sanitizeText(rawDescription, 1000) || null;
   const categoryPath = normalizeCategoryPath(rawCategoryPath);
   if (!categoryPath) {
     throw new Error("Categoria inválida. Informe ao menos um nível.");
@@ -232,62 +394,11 @@ export async function createPreparedTemplateAction(formData: FormData) {
   }
 
   try {
-    const [existingCategory] = await db
-      .select({ id: preparedTemplateCategories.id, path: preparedTemplateCategories.path })
-      .from(preparedTemplateCategories)
-      .where(
-        or(
-          eq(preparedTemplateCategories.pathKey, categoryPathKey),
-          eq(preparedTemplateCategories.path, categoryPath)
-        )
-      )
-      .limit(1);
-
-    let categoryId: string;
-
-    if (!existingCategory) {
-      try {
-        const [insertedCategory] = await db
-          .insert(preparedTemplateCategories)
-          .values({
-            path: categoryPath,
-            pathKey: categoryPathKey,
-          })
-          .returning({ id: preparedTemplateCategories.id });
-
-        categoryId = insertedCategory.id;
-      } catch {
-        const [categoryAfterConflict] = await db
-          .select({ id: preparedTemplateCategories.id })
-          .from(preparedTemplateCategories)
-          .where(
-            or(
-              eq(preparedTemplateCategories.pathKey, categoryPathKey),
-              eq(preparedTemplateCategories.path, categoryPath)
-            )
-          )
-          .limit(1);
-
-        if (!categoryAfterConflict) {
-          throw new Error("Não foi possível resolver a categoria do modelo pronto.");
-        }
-
-        categoryId = categoryAfterConflict.id;
-      }
-    } else {
-      categoryId = existingCategory.id;
-      if (existingCategory.path !== categoryPath) {
-        await db
-          .update(preparedTemplateCategories)
-          .set({ path: categoryPath })
-          .where(eq(preparedTemplateCategories.id, existingCategory.id));
-      }
-    }
+    const categoryId = await resolvePreparedTemplateCategoryId(categoryPath, categoryPathKey);
 
     await db.insert(preparedTemplates).values({
       slug,
       name,
-      description,
       categoryId,
       storageUrl: makeR2Pointer(r2Key),
       isPublic: true,
@@ -308,6 +419,127 @@ export async function createPreparedTemplateAction(formData: FormData) {
   revalidatePath("/modelos-prontos");
   revalidatePath("/admin/modelos-prontos");
   redirect("/admin/modelos-prontos?status=uploaded");
+}
+
+export async function publishPreparedTemplateBatchAction(formData: FormData): Promise<{
+  created: number;
+  failed: number;
+  createdItems: Array<{ id: string; name: string; file: string; isPublic: boolean }>;
+  errors: Array<{ file: string; message: string }>;
+}> {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const files = formData.getAll("files") as File[];
+  if (files.length === 0) {
+    throw new Error("Envie ao menos um arquivo .docx.");
+  }
+
+  const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
+  const rawBatchPayload = (formData.get("batchPayload") as string) ?? "";
+
+  const categoryPath = normalizeCategoryPath(rawCategoryPath);
+  if (!categoryPath) {
+    throw new Error("Categoria inválida. Informe ao menos um nível.");
+  }
+  const categoryPathKey = buildCategoryPathKey(categoryPath);
+  const categoryId = await resolvePreparedTemplateCategoryId(categoryPath, categoryPathKey);
+
+  const payload = parseBatchPayload(rawBatchPayload);
+  if (payload.length === 0) {
+    throw new Error("Payload de publicação em lote vazio.");
+  }
+
+  const errors: Array<{ file: string; message: string }> = [];
+  const createdItems: Array<{ id: string; name: string; file: string; isPublic: boolean }> = [];
+  let created = 0;
+
+  for (const item of payload) {
+    const file = files[item.index];
+    const displayName = file?.name || `arquivo-${item.index + 1}`;
+
+    try {
+      if (!file) {
+        throw new Error("Arquivo não encontrado para este item do lote.");
+      }
+
+      validateDocxFile(file);
+
+      const name = sanitizeText(item.name, 255);
+      if (!name) {
+        throw new Error("Nome do modelo inválido.");
+      }
+
+      const slug = buildSlug(name);
+      const arrayBuffer = await file.arrayBuffer();
+      let buffer = Buffer.from(arrayBuffer) as Buffer;
+
+      buffer = await maybePrepareTemplateWithAi(buffer, "ai", item.slotFieldKeys);
+      buffer = await normalizeDocxContent(buffer);
+      await parseDocxPlaceholders(buffer);
+      const formattingCheck = await validateDocxTemplateFormatting(buffer);
+
+      if (!formattingCheck.isValid) {
+        throw new Error("Erro de formatação após aplicar coringas revisados.");
+      }
+
+      const r2Key = await uploadPreparedTemplateToR2({
+        slug,
+        originalFilename: file.name,
+        buffer,
+        contentType: file.type || undefined,
+        ownerUserId: null,
+      });
+
+      try {
+        const inserted = await db.insert(preparedTemplates).values({
+          slug,
+          name,
+          categoryId,
+          storageUrl: makeR2Pointer(r2Key),
+          isPublic: false,
+          ownerUserId: null,
+        }).returning({ id: preparedTemplates.id, name: preparedTemplates.name, isPublic: preparedTemplates.isPublic });
+
+        if (inserted[0]) {
+          createdItems.push({
+            id: inserted[0].id,
+            name: inserted[0].name,
+            file: displayName,
+            isPublic: inserted[0].isPublic,
+          });
+        }
+      } catch (error) {
+        try {
+          await deleteTemplateFromR2(r2Key);
+        } catch (cleanupError) {
+          console.error("Erro ao limpar arquivo do R2 após falha no insert em lote:", cleanupError);
+        }
+        throw error;
+      }
+
+      created += 1;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha ao publicar item do lote.";
+      errors.push({ file: displayName, message });
+    }
+  }
+
+  if (created > 0) {
+    updateTag("prepared-templates-public");
+    revalidatePath("/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos/categorias");
+  }
+
+  return {
+    created,
+    failed: errors.length,
+    createdItems,
+    errors,
+  };
 }
 
 export async function deletePreparedTemplateAction(formData: FormData) {
@@ -372,4 +604,282 @@ export async function setPreparedTemplateVisibilityAction(formData: FormData) {
   revalidatePath("/modelos-prontos");
   revalidatePath("/admin/modelos-prontos");
   redirect(`/admin/modelos-prontos?status=${makePublic ? "shown" : "hidden"}`);
+}
+
+export async function applyPreparedTemplateBulkAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const operation = sanitizeText((formData.get("operation") as string) ?? "", 16);
+  const rawIds = formData.getAll("ids");
+
+  const ids = Array.from(
+    new Set(
+      rawIds
+        .map((value) => sanitizeText(String(value ?? ""), 255))
+        .filter(Boolean)
+    )
+  );
+
+  if (ids.length === 0) {
+    redirect("/admin/modelos-prontos?status=bulk-empty");
+  }
+
+  if (operation === "show" || operation === "hide") {
+    const makePublic = operation === "show";
+
+    await db
+      .update(preparedTemplates)
+      .set({ isPublic: makePublic })
+      .where(inArray(preparedTemplates.id, ids));
+
+    updateTag("prepared-templates-public");
+    revalidatePath("/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos/lote");
+    redirect(`/admin/modelos-prontos?status=${makePublic ? "bulk-shown" : "bulk-hidden"}`);
+  }
+
+  if (operation === "delete") {
+    const templates = await db
+      .select({ id: preparedTemplates.id, storageUrl: preparedTemplates.storageUrl })
+      .from(preparedTemplates)
+      .where(inArray(preparedTemplates.id, ids));
+
+    for (const template of templates) {
+      try {
+        await deleteTemplateFromR2(getR2KeyFromPointer(template.storageUrl));
+      } catch (error) {
+        console.error("Erro ao remover arquivo do R2 em lote:", error);
+      }
+    }
+
+    await db.delete(preparedTemplates).where(inArray(preparedTemplates.id, ids));
+
+    updateTag("prepared-templates-public");
+    revalidatePath("/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos/lote");
+    redirect("/admin/modelos-prontos?status=bulk-deleted");
+  }
+
+  throw new Error("Operação em lote inválida.");
+}
+
+export async function setPreparedTemplateVisibilityInlineAction(templateId: string, makePublic: boolean) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const id = sanitizeText(templateId, 255);
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
+  const updated = await db
+    .update(preparedTemplates)
+    .set({ isPublic: makePublic })
+    .where(eq(preparedTemplates.id, id))
+    .returning({ id: preparedTemplates.id, isPublic: preparedTemplates.isPublic });
+
+  if (updated.length === 0) {
+    throw new Error("Modelo não encontrado.");
+  }
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/lote");
+
+  return { success: true, isPublic: updated[0].isPublic };
+}
+
+export async function deletePreparedTemplateInlineAction(templateId: string) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const id = sanitizeText(templateId, 255);
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
+  const [template] = await db
+    .select({ id: preparedTemplates.id, storageUrl: preparedTemplates.storageUrl })
+    .from(preparedTemplates)
+    .where(eq(preparedTemplates.id, id))
+    .limit(1);
+
+  if (!template) {
+    throw new Error("Modelo não encontrado.");
+  }
+
+  try {
+    await deleteTemplateFromR2(getR2KeyFromPointer(template.storageUrl));
+  } catch (error) {
+    console.error("Erro ao remover arquivo do R2:", error);
+  }
+
+  await db.delete(preparedTemplates).where(eq(preparedTemplates.id, id));
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/lote");
+
+  return { success: true };
+}
+
+export async function updatePreparedTemplateCategoryAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const templateId = sanitizeText((formData.get("id") as string) ?? "", 255);
+  const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
+
+  if (!templateId) {
+    throw new Error("ID inválido.");
+  }
+
+  const categoryPath = normalizeCategoryPath(rawCategoryPath);
+  if (!categoryPath) {
+    throw new Error("Categoria inválida. Informe ao menos um nível.");
+  }
+
+  const categoryPathKey = buildCategoryPathKey(categoryPath);
+  const categoryId = await resolvePreparedTemplateCategoryId(categoryPath, categoryPathKey);
+
+  const updated = await db
+    .update(preparedTemplates)
+    .set({ categoryId })
+    .where(eq(preparedTemplates.id, templateId))
+    .returning({ id: preparedTemplates.id });
+
+  if (updated.length === 0) {
+    throw new Error("Modelo não encontrado.");
+  }
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/categorias");
+  redirect("/admin/modelos-prontos/categorias?status=updated");
+}
+
+export async function createPreparedTemplateCategoryAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
+  const categoryPath = normalizeCategoryPath(rawCategoryPath);
+
+  if (!categoryPath) {
+    throw new Error("Categoria inválida. Informe ao menos um nível.");
+  }
+
+  const categoryPathKey = buildCategoryPathKey(categoryPath);
+  await resolvePreparedTemplateCategoryId(categoryPath, categoryPathKey);
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/categorias");
+  redirect("/admin/modelos-prontos/categorias?status=created");
+}
+
+export async function renamePreparedTemplateCategoryAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const categoryId = sanitizeText((formData.get("id") as string) ?? "", 255);
+  const rawCategoryPath = (formData.get("categoryPath") as string) ?? "";
+
+  if (!categoryId) {
+    throw new Error("ID inválido.");
+  }
+
+  const categoryPath = normalizeCategoryPath(rawCategoryPath);
+  if (!categoryPath) {
+    throw new Error("Categoria inválida. Informe ao menos um nível.");
+  }
+
+  const categoryPathKey = buildCategoryPathKey(categoryPath);
+
+  const [currentCategory] = await db
+    .select({
+      id: preparedTemplateCategories.id,
+      pathKey: preparedTemplateCategories.pathKey,
+    })
+    .from(preparedTemplateCategories)
+    .where(eq(preparedTemplateCategories.id, categoryId))
+    .limit(1);
+
+  if (!currentCategory) {
+    throw new Error("Categoria não encontrada.");
+  }
+
+  const [targetCategory] = await db
+    .select({ id: preparedTemplateCategories.id })
+    .from(preparedTemplateCategories)
+    .where(eq(preparedTemplateCategories.pathKey, categoryPathKey))
+    .limit(1);
+
+  if (targetCategory && targetCategory.id !== categoryId) {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(preparedTemplates)
+        .set({ categoryId: targetCategory.id })
+        .where(eq(preparedTemplates.categoryId, categoryId));
+
+      await tx.delete(preparedTemplateCategories).where(eq(preparedTemplateCategories.id, categoryId));
+    });
+
+    updateTag("prepared-templates-public");
+    revalidatePath("/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos");
+    revalidatePath("/admin/modelos-prontos/categorias");
+    redirect("/admin/modelos-prontos/categorias?status=merged");
+  }
+
+  await db
+    .update(preparedTemplateCategories)
+    .set({ path: categoryPath, pathKey: categoryPathKey })
+    .where(eq(preparedTemplateCategories.id, categoryId));
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/categorias");
+  redirect("/admin/modelos-prontos/categorias?status=renamed");
+}
+
+export async function deletePreparedTemplateCategoryAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const categoryId = sanitizeText((formData.get("id") as string) ?? "", 255);
+
+  if (!categoryId) {
+    throw new Error("ID inválido.");
+  }
+
+  await db.delete(preparedTemplateCategories).where(eq(preparedTemplateCategories.id, categoryId));
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos/categorias");
+  redirect("/admin/modelos-prontos/categorias?status=deleted");
 }

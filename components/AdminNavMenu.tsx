@@ -61,6 +61,20 @@ export function AdminNavMenu() {
         >
           Modelos Prontos
         </Link>
+        <Link
+          href="/admin/modelos-prontos/lote"
+          onClick={closeMenu}
+          className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+        >
+          Publicação em Lote
+        </Link>
+        <Link
+          href="/admin/modelos-prontos/categorias"
+          onClick={closeMenu}
+          className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+        >
+          Categorias de Modelos
+        </Link>
       </div>
     </details>
   );

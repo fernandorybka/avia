@@ -25,6 +25,7 @@ type Props = {
 };
 
 export function AdminPreparedTemplateForm({ categoryPaths }: Props) {
+  const [templateName, setTemplateName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"manual" | "ai">("manual");
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
@@ -53,6 +54,9 @@ export function AdminPreparedTemplateForm({ categoryPaths }: Props) {
       formData.set("file", file);
       const result = await suggestPreparedTemplateSlotsAction(formData);
       setSuggestions(result.suggestions.map((item) => ({ ...item, keepBlank: false })));
+      if (!templateName.trim() && result.suggestedName) {
+        setTemplateName(result.suggestedName);
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Falha ao sugerir coringas.";
       setError(message);
@@ -101,6 +105,8 @@ export function AdminPreparedTemplateForm({ categoryPaths }: Props) {
           name="name"
           required
           maxLength={255}
+          value={templateName}
+          onChange={(event) => setTemplateName(event.target.value)}
           className="w-full h-10 rounded-md border bg-background px-3 text-sm"
           placeholder="Ex.: Contrato padrão de cessão"
         />
@@ -146,20 +152,6 @@ export function AdminPreparedTemplateForm({ categoryPaths }: Props) {
         <p className="text-xs text-muted-foreground">
           Use &quot;&gt;&quot; para níveis hierárquicos. Você pode escolher uma existente ou criar nova.
         </p>
-      </div>
-
-      <div className="space-y-2 md:col-span-2">
-        <label htmlFor="description" className="text-sm font-medium text-foreground">
-          Descrição (opcional)
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          maxLength={1000}
-          rows={3}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="Contexto rápido para quem vai baixar este modelo"
-        />
       </div>
 
       <div className="space-y-2 md:col-span-2">

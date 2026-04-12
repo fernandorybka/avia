@@ -5,11 +5,13 @@ import { connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
+import Link from "next/link";
 import { getAllUserTags } from "@/services/tag-actions";
 import { DashboardContainer } from "@/components/DashboardContainer";
 import { getTemplateWithDetails } from "@/services/template-services";
-import { FileText } from "lucide-react";
+import { FileText, PackageOpen } from "lucide-react";
 import { WorkflowInfographic } from "@/components/WorkflowInfographic";
+import { Button } from "@/components/ui/button";
 
 async function DashboardContent() {
   const { userId } = await auth();
@@ -66,6 +68,24 @@ export default async function ModelosPage() {
               </p>
             </div>
           </div>
+
+          <section className="rounded-xl border border-primary/20 bg-primary/5 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <PackageOpen className="w-4 h-4 text-primary" />
+                Quer ganhar tempo?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Antes de criar um modelo do zero, veja se ele já está disponível em <strong>Modelos Prontos</strong>.
+              </p>
+            </div>
+            <Link href="/modelos-prontos" className="shrink-0">
+              <Button>
+                <PackageOpen className="w-4 h-4" />
+                Ver Modelos Prontos
+              </Button>
+            </Link>
+          </section>
 
           <WorkflowInfographic />
 

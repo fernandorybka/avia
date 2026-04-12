@@ -1,11 +1,11 @@
-import { BookOpen, FileText, Lightbulb, AlertTriangle, CheckCircle2, ArrowRight, Hash, LifeBuoy } from "lucide-react";
+import { BookOpen, FileText, Lightbulb, AlertTriangle, CheckCircle2, ArrowRight, Hash, LifeBuoy, PackageOpen } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ZoomImage } from "./zoom-image";
 
 export const metadata = {
   title: "Como configurar modelos – avia!",
-  description: "Aprenda a criar e configurar modelos de documentos no avia! usando coringas ##CAMPO## para geração automatizada.",
+  description: "Aprenda a criar modelos com coringas e veja quando usar modelos prontos para gerar documentos mais rápido.",
 };
 
 const steps = [
@@ -56,6 +56,32 @@ export default function AjudaPage() {
               </p>
             </div>
           </div>
+
+          {/* What is a wildcard */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <PackageOpen className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-bold text-foreground">Quer acelerar? Use Modelos Prontos</h2>
+            </div>
+
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Se você trabalha com editais recorrentes, primeiro confira a área de <strong>Modelos Prontos</strong>.
+                Lá já existem documentos pré-configurados com coringas para download imediato, sem precisar montar do zero.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link href="/modelos-prontos">
+                  <Button>
+                    <PackageOpen className="w-4 h-4" />
+                    Ver Modelos Prontos
+                  </Button>
+                </Link>
+                <Link href="/modelos" className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
+                  Prefiro criar meu próprio modelo
+                </Link>
+              </div>
+            </div>
+          </section>
 
           {/* What is a wildcard */}
           <section className="space-y-6">
@@ -223,18 +249,26 @@ export default function AjudaPage() {
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="space-y-2">
               <h3 className="font-bold text-foreground text-lg">Pronto para começar?</h3>
-              <p className="text-sm text-muted-foreground">Envie seu primeiro modelo e comece a gerar documentos em segundos.</p>
+              <p className="text-sm text-muted-foreground">Comece por modelos prontos para ganhar velocidade, ou envie seu próprio modelo quando precisar personalizar.</p>
               <a href="mailto:fernando.pr@gmail.com?subject=Contato%20via%20avia!" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline underline-offset-4">
                 <LifeBuoy className="w-4 h-4" />
                 Precisa de ajuda? Fale conosco
               </a>
             </div>
-            <Link href="/modelos">
-              <Button size="lg" className="px-8 shadow-md hover:shadow-lg transition-all whitespace-nowrap">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/modelos-prontos">
+                <Button size="lg" className="px-8 shadow-md hover:shadow-lg transition-all whitespace-nowrap">
+                  <PackageOpen className="mr-2 w-4 h-4" />
+                  Ir para Modelos Prontos
+                </Button>
+              </Link>
+              <Link href="/modelos">
+                <Button size="lg" variant="outline" className="px-8 whitespace-nowrap">
                 <FileText className="mr-2 w-4 h-4" />
                 Ir para Modelos
-              </Button>
-            </Link>
+                </Button>
+              </Link>
+            </div>
           </div>
 
         </div>

@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import { Eye, EyeOff, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminPreparedTemplateForm } from "@/components/AdminPreparedTemplateForm";
+import { AdminRenameTemplateDialog } from "@/components/AdminRenameTemplateDialog";
+import { PreparedTemplateDownloadButton } from "@/components/PreparedTemplateDownloadButton";
 import {
   Table,
   TableBody,
@@ -33,7 +35,8 @@ type Props = {
       | "bulk-hidden"
       | "bulk-shown"
       | "bulk-deleted"
-      | "bulk-empty";
+      | "bulk-empty"
+      | "renamed";
   }>;
 };
 
@@ -118,6 +121,12 @@ export default async function AdminPreparedTemplatesPage({ searchParams }: Props
             </div>
           )}
 
+          {status === "renamed" && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+              Nome do modelo pronto alterado com sucesso.
+            </div>
+          )}
+
           <section className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Novo modelo pronto</h2>
             <AdminPreparedTemplateForm categoryPaths={categoryPaths} />
@@ -196,6 +205,13 @@ export default async function AdminPreparedTemplatesPage({ searchParams }: Props
                               {template.isPublic ? "Esconder" : "Exibir"}
                             </Button>
                           </form>
+
+                          <AdminRenameTemplateDialog
+                            templateId={template.id}
+                            currentName={template.name}
+                          />
+
+                          <PreparedTemplateDownloadButton templateId={template.id} />
 
                           <form action={deletePreparedTemplateAction} className="inline-flex">
                             <input type="hidden" name="id" value={template.id} />

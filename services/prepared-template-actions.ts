@@ -883,3 +883,36 @@ export async function deletePreparedTemplateCategoryAction(formData: FormData) {
   revalidatePath("/admin/modelos-prontos/categorias");
   redirect("/admin/modelos-prontos/categorias?status=deleted");
 }
+
+export async function renamePreparedTemplateAction(formData: FormData) {
+  const isAdmin = await isCurrentUserAdmin();
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const id = sanitizeText((formData.get("id") as string) ?? "", 255);
+  const newName = sanitizeText((formData.get("name") as string) ?? "", 255);
+
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
+  if (!newName) {
+    throw new Error("O nome do modelo não pode ser vazio.");
+  }
+
+  const updated = await db
+    .update(preparedTemplates)
+    .set({ name: newName })
+    .where(eq(preparedTemplates.id, id))
+    .returning({ id: preparedTemplates.id });
+
+  if (updated.length === 0) {
+    throw new Error("Modelo não encontrado.");
+  }
+
+  updateTag("prepared-templates-public");
+  revalidatePath("/modelos-prontos");
+  revalidatePath("/admin/modelos-prontos");
+  redirect("/admin/modelos-prontos?status=renamed");
+}

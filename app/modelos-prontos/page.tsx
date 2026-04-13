@@ -57,7 +57,10 @@ function CategoryBranch({
   const sectionCount = node.templates.length + childEntries.length;
 
   return (
-    <details className="rounded-xl border bg-card shadow-sm overflow-hidden [&[open]>summary_.category-chevron]:rotate-180" open>
+    <details
+      className="rounded-xl border bg-card shadow-sm overflow-hidden [&[open]>summary_.category-chevron]:rotate-180"
+      open={level !== 1}
+    >
       <summary className="px-5 py-4 border-b bg-muted/25 cursor-pointer list-none">
         <div className="flex items-center justify-between gap-3">
           <h2 className={`${headingClass} font-semibold tracking-tight text-foreground`}>{label}</h2>

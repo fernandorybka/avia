@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const modak = Modak({ weight: '400', subsets: ['latin'], variable: '--font-modak' });
@@ -38,6 +39,7 @@ export default function RootLayout({
             <ClerkProvider dynamic>
               <Header />
               {children}
+              <Footer />
               <Toaster richColors position="bottom-right" />
             </ClerkProvider>
           </Suspense>

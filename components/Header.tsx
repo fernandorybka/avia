@@ -4,6 +4,7 @@ import { UserButton, SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { ThemeToggle } from "./ThemeToggle";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { AdminNavMenu } from "./AdminNavMenu";
+import { MobileNav } from "./MobileNav";
 
 export async function Header() {
   const canAccessAdmin = await isCurrentUserAdmin();
@@ -14,7 +15,7 @@ export async function Header() {
         <Link href="/" className="font-logo font-normal text-[3rem] tracking-tight flex items-baseline gap-1 text-[#ff3939] drop-shadow-sm hover:opacity-90 transition-opacity">
           avia!
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="hidden items-center gap-4 md:flex">
           <Link href="/modelos">
             <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Modelos</Button>
           </Link>
@@ -40,6 +41,8 @@ export async function Header() {
             </SignedOut>
           </div>
         </nav>
+
+        <MobileNav canAccessAdmin={canAccessAdmin} />
       </div>
     </header>
   );

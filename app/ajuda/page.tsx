@@ -57,6 +57,27 @@ export default function AjudaPage() {
             </div>
           </div>
 
+          {/* Video tutorial */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-bold text-foreground">Tutorial em video</h2>
+            <p className="text-sm text-muted-foreground">
+              Prefere ver na pratica? Assista ao tutorial completo no YouTube:
+            </p>
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="relative w-full pt-[56.25%]">
+                <iframe
+                  className="absolute inset-0 h-full w-full"
+                  src="https://www.youtube.com/embed/YM8buecgg5s"
+                  title="Tutorial de configuracao de modelos no avia"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </section>
+
           {/* What is a wildcard */}
           <section className="space-y-4">
             <div className="flex items-center gap-3">

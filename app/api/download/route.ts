@@ -3,11 +3,12 @@ import { templates, documentGenerations, documentGenerationValues } from "@/db/s
 import { eq } from "drizzle-orm";
 import { generateDocx } from "@/lib/docx-utils";
 import { NextRequest } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { getR2KeyFromPointer, getTemplateBufferFromR2 } from "@/lib/r2";
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = new URL(request.url);
     const templateId = searchParams.get("templateId");
     const generationId = searchParams.get("generationId");
 
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    unstable_rethrow(error);
     console.error("API Download error:", error);
     return new Response("Internal Server Error", { status: 500 });
   }

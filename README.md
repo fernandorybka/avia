@@ -20,6 +20,8 @@ Try it at: [https://avia-navy.vercel.app/](https://avia-navy.vercel.app/)
 - **Dynamic Content**: Fill templates with real-time data.
 - **Document Generation**: Generate ready-to-download documents from saved templates.
 - **Admin AI Preparation**: Convert edital originals with blank lines (`_____`) into wildcard-ready templates.
+- **Pluggable AI Providers**: Run slot suggestion with Gemini, Groq, or a local mock provider.
+- **Sentry Observability**: Capture frontend/backend errors, traces, logs, and session replay.
 - **Fast UX**: Built with a modern Next.js stack.
 
 ---
@@ -33,6 +35,8 @@ Try it at: [https://avia-navy.vercel.app/](https://avia-navy.vercel.app/)
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
 - **Object Storage**: [Cloudflare R2](https://developers.cloudflare.com/r2/)
 - **Document Processing**: [mammoth](https://github.com/mwilliamson/mammoth.js), [docxtemplater](https://docxtemplater.com/), [pizzip](https://github.com/open-xml-templating/pizzip)
+- **AI Integrations**: [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/)
+- **Monitoring**: [Sentry for Next.js](https://docs.sentry.io/platforms/javascript/guides/nextjs/)
 
 ---
 
@@ -49,6 +53,35 @@ Try it at: [https://avia-navy.vercel.app/](https://avia-navy.vercel.app/)
 5. The DOCX pipeline merges placeholders and returns the generated file.
 
 > This project uses Next.js proxy-based protection in `proxy.ts` with Clerk (`auth.protect()`) for private routes.
+
+---
+
+## AI Integrations
+
+The admin prepared-template flow uses a provider abstraction (`lib/ai/template-suggester.ts`) to suggest canonical `fieldKey` names for placeholders.
+
+Supported providers:
+- **`gemini`**: Uses `GEMINI_API_KEY` + `GEMINI_MODEL`.
+- **`groq`**: Uses `GROQ_API_KEY` + `GROQ_MODEL`.
+- **`mock`**: Local deterministic fallback for development/testing.
+
+How AI output is handled:
+- Responses are constrained to JSON and normalized before use.
+- Suggested keys are resolved against the app's canonical wildcard catalog.
+- Missing/uncertain slots are auto-filled as `CAMPO_<n>` to keep templates complete.
+
+---
+
+## Sentry Monitoring
+
+Sentry is integrated across the full Next.js runtime:
+- **Client**: initialized in `instrumentation-client.ts` with tracing, logs, and replay.
+- **Server + Edge**: initialized in `instrumentation.ts`, `sentry.server.config.ts`, and `sentry.edge.config.ts`.
+- **Build plugin**: enabled via `withSentryConfig` in `next.config.ts` (source-map upload + tunnel route).
+
+Project includes test endpoints/pages for validation:
+- `app/sentry-example-page/page.tsx`
+- `app/api/sentry-example-api/route.ts`
 
 ---
 
@@ -109,6 +142,12 @@ GROQ_MODEL=llama-3.3-70b-versatile
 # optional alternative provider
 GEMINI_API_KEY=your-gemini-api-key
 GEMINI_MODEL=gemini-2.0-flash
+```
+
+Optional Sentry variable (recommended in CI for source maps upload):
+
+```bash
+SENTRY_AUTH_TOKEN=your-sentry-auth-token
 ```
 
 ### 4) Push database schema

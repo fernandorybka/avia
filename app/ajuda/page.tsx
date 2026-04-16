@@ -67,7 +67,7 @@ export default function AjudaPage() {
               <div className="relative w-full pt-[56.25%]">
                 <iframe
                   className="absolute inset-0 h-full w-full"
-                  src="https://www.youtube.com/embed/YM8buecgg5s"
+                  src="https://www.youtube.com/embed/Utqm1K6yvIk?vq=hd720"
                   title="Tutorial de configuracao de modelos no avia"
                   loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

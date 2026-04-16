@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { CadastrosViewer } from "@/components/CadastrosViewer";
 
 import { unstable_cache } from "next/cache";
+import { decryptFieldValue } from "@/lib/field-encryption";
 
 export default async function CadastrosPage() {
   await connection();
@@ -47,7 +48,10 @@ export default async function CadastrosPage() {
 
       const groupedValues = values.reduce((acc, curr) => {
         if (!acc[curr.generationId]) acc[curr.generationId] = [];
-        acc[curr.generationId].push(curr);
+        acc[curr.generationId].push({
+          ...curr,
+          fieldValue: decryptFieldValue(curr.fieldValue),
+        });
         return acc;
       }, {} as Record<string, typeof values>);
 

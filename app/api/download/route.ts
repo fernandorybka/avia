@@ -1,10 +1,12 @@
 import { db } from "@/db";
 import { templates, documentGenerations, documentGenerationValues } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { generateDocx } from "@/lib/docx-utils";
 import { NextRequest } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { getR2KeyFromPointer, getTemplateBufferFromR2 } from "@/lib/r2";
+import { auth } from "@clerk/nextjs/server";
+import { decryptFieldValue } from "@/lib/field-encryption";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,9 +18,20 @@ export async function GET(request: NextRequest) {
       return new Response("Missing parameters", { status: 400 });
     }
 
+    const { userId } = await auth();
+    if (!userId) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const [[template], [generation], values] = await Promise.all([
-      db.select().from(templates).where(eq(templates.id, templateId)).limit(1),
-      db.select().from(documentGenerations).where(eq(documentGenerations.id, generationId)).limit(1),
+      db.select().from(templates).where(and(
+        eq(templates.id, templateId),
+        eq(templates.userId, userId)
+      )).limit(1),
+      db.select().from(documentGenerations).where(and(
+        eq(documentGenerations.id, generationId),
+        eq(documentGenerations.userId, userId)
+      )).limit(1),
       db.select().from(documentGenerationValues).where(eq(documentGenerationValues.generationId, generationId))
     ]);
 
@@ -28,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     const valuesRecord: Record<string, string> = {};
     for (const v of values) {
-      valuesRecord[v.fieldKey] = v.fieldValue;
+      valuesRecord[v.fieldKey] = decryptFieldValue(v.fieldValue);
     }
 
     if (!template.storageUrl) {

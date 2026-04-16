@@ -23,6 +23,7 @@ import {
   makeR2Pointer,
   uploadTemplateToR2,
 } from "@/lib/r2";
+import { decryptFieldValue, encryptFieldValue } from "@/lib/field-encryption";
 
 
 export async function uploadTemplateAction(formData: FormData) {
@@ -192,15 +193,17 @@ export async function createGenerationAction(
           eq(documentGenerationValues.fieldKey, fieldKey)
         ));
     } else {
+      const encryptedFieldValue = encryptFieldValue(fieldValue);
+
       await db.insert(documentGenerationValues)
         .values({
           generationId: generation.id,
           fieldKey,
-          fieldValue,
+          fieldValue: encryptedFieldValue,
         })
         .onConflictDoUpdate({
           target: [documentGenerationValues.generationId, documentGenerationValues.fieldKey],
-          set: { fieldValue }
+          set: { fieldValue: encryptedFieldValue }
         });
     }
   });
@@ -215,10 +218,33 @@ export async function createGenerationAction(
 }
 
 export async function fetchGenerationValuesAction(generationId: string) {
-  return await db
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+
+  const [generation] = await db
+    .select({ id: documentGenerations.id })
+    .from(documentGenerations)
+    .where(and(
+      eq(documentGenerations.id, generationId),
+      eq(documentGenerations.userId, userId)
+    ))
+    .limit(1);
+
+  if (!generation) {
+    throw new Error("Cadastro não encontrado.");
+  }
+
+  const values = await db
     .select()
     .from(documentGenerationValues)
     .where(eq(documentGenerationValues.generationId, generationId));
+
+  return values.map((value) => ({
+    ...value,
+    fieldValue: decryptFieldValue(value.fieldValue),
+  }));
 }
 
 export async function deleteGenerationAction(generationId: string) {

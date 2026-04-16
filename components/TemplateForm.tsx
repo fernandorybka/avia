@@ -97,6 +97,35 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
     }));
   };
 
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const getFilenameFromHeader = (headerValue: string | null): string => {
+    if (!headerValue) {
+      return `${templateName}.docx`;
+    }
+
+    const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      return decodeURIComponent(utf8Match[1]);
+    }
+
+    const fallbackMatch = headerValue.match(/filename="?([^";]+)"?/i);
+    if (fallbackMatch?.[1]) {
+      return fallbackMatch[1];
+    }
+
+    return `${templateName}.docx`;
+  };
+
   const onSubmit = async (data: FormData) => {
     const genName = data["NOME"] || data["nome"] || data["Nome"];
     if (!genName || typeof genName !== 'string' || !genName.trim()) {
@@ -107,9 +136,26 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
     setIsSubmitting(true);
     try {
       const response = await createGenerationAction(templateId, genName.trim(), data, shouldSaveMap);
-      
-      // Trigger download
-      window.location.href = `/api/download?templateId=${templateId}&generationId=${response.generationId}`;
+
+      const downloadResponse = await fetch("/api/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          templateId,
+          generationId: response.generationId,
+          values: data,
+        }),
+      });
+
+      if (!downloadResponse.ok) {
+        throw new Error("Falha ao baixar documento");
+      }
+
+      const filename = getFilenameFromHeader(downloadResponse.headers.get("Content-Disposition"));
+      const blob = await downloadResponse.blob();
+      triggerDownload(blob, filename);
       
       toast.success("Documento gerado com sucesso!", {
         description: "O download deve começar em instantes.",

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, unique, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, varchar, unique, boolean, integer, numeric } from "drizzle-orm/pg-core";
 
 export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -52,4 +52,38 @@ export const preparedTemplates = pgTable("prepared_templates", {
   isPublic: boolean("is_public").notNull().default(true),
   ownerUserId: varchar("owner_user_id", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const merchProducts = pgTable("merch_products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  color: varchar("color", { length: 7 }).notNull().default("#a8a29e"), // Swatch shown on the sales screen
+  price: numeric("price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const merchVariants = pgTable("merch_variants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id").references(() => merchProducts.id, { onDelete: "cascade" }).notNull(),
+  size: text("size").notNull(),
+  quantity: integer("quantity").notNull().default(0), // Units available right now
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Sales keep a text snapshot so products can be renamed or deleted without touching history
+export const merchSales = pgTable("merch_sales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  variantId: uuid("variant_id").references(() => merchVariants.id, { onDelete: "set null" }),
+  productName: text("product_name").notNull(),
+  size: text("size").notNull(),
+  price: numeric("price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+  soldBy: text("sold_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// People allowed to use the merch screens without being admins (admins come from ADMIN_EMAILS)
+export const merchMembers = pgTable("merch_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(), // Stored lowercase
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Settings2, PackageOpen, FolderTree, Layers } from "lucide-react";
+import { Settings2, PackageOpen, FolderTree, Layers, Shirt } from "lucide-react";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +28,19 @@ export default async function AdminPage() {
           </div>
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
+              <div className="inline-flex w-10 h-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Shirt className="w-5 h-5" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Lojinha</h2>
+              <p className="text-sm text-muted-foreground">
+                Registre vendas de camisas e acompanhe o estoque.
+              </p>
+              <Button asChild size="sm">
+                <Link href="/merch">Abrir módulo</Link>
+              </Button>
+            </div>
+
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
               <div className="inline-flex w-10 h-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <PackageOpen className="w-5 h-5" />

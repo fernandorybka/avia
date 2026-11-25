@@ -97,6 +97,19 @@ Storage lifecycle:
 
 ---
 
+## Projetos (Monitor de Pagamentos)
+
+Tracks the financial execution of cultural projects: the budget spreadsheet becomes *rubricas* (planned / paid / balance), each payment has a type whose document checklist is marked as done, and a timeline lists every payment.
+
+- **Access**: only signed-in people whose **verified** e-mail is in `PROJECT_MANAGER_EMAILS` (admins are not included automatically). Each project belongs to the person who created it. Checks run on the server in the layout, in every server action and in the download route (`lib/project-guard.ts`).
+- **Encryption**: rubrica names/identifiers/values and payment amount/payee/comment are stored as `enc:v1:` values (`lib/field-encryption.ts`, same key and scheme as Cadastros) and decrypted on the server only for the owner. Amounts are integer cents.
+- **Budget files**: `.xlsx` up to 2 MB, validated before parsing (zip size/entries, no macros, row/column limits; formulas are never evaluated). Stored in R2 under `budgets/<owner>/<project>/<uuid>.enc`, encrypted with a subkey derived (HKDF) from `FIELD_VALUE_ENCRYPTION_KEY`. No presigned URLs: downloads go through an authenticated route.
+- **Remanejamento**: upload a new version of the spreadsheet; the app shows what changes before applying. Rubricas that leave the budget but have payments stay as "fora do orçamento". Every applied version keeps a snapshot (`budget_version_lines`) for future change history.
+- **Telemetry**: Sentry drops request bodies, cookies and query strings for `/projetos` routes (`lib/sentry-scrub.ts`); actions report only the action name and error class.
+- **Key rotation (future)**: the `enc:v1:` prefix and the `AVIA-ENC1` file header are versioned, so a new key can be introduced as `v2` and old values re-encrypted in a script without downtime.
+
+---
+
 ## Getting Started
 
 ### 1) Clone the repository

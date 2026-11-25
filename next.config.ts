@@ -3,7 +3,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true, 
-  reactCompiler: true
+  reactCompiler: true,
+  experimental: {
+    serverActions: {
+      // Budget spreadsheets go up to 2 MB (lib/budget-sheet.ts) plus multipart overhead
+      bodySizeLimit: "3mb",
+    },
+  },
 };
 
 export default withSentryConfig(nextConfig, {

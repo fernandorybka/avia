@@ -4,6 +4,7 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { scrubSensitiveBreadcrumb, scrubSensitiveEvent } from "./lib/sentry-scrub";
 
 Sentry.init({
   dsn: "https://0cbbd5015e0155e0a5caf5c1727a848c@o4511218344853504.ingest.us.sentry.io/4511218346950656",
@@ -17,4 +18,9 @@ Sentry.init({
   // Enable sending user PII (Personally Identifiable Information)
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
+
+  // The projects module handles decrypted financial/personal data: keep it out of events
+  beforeSend: scrubSensitiveEvent,
+  beforeSendTransaction: scrubSensitiveEvent,
+  beforeBreadcrumb: scrubSensitiveBreadcrumb,
 });

@@ -118,6 +118,28 @@ export async function uploadPreparedTemplateToR2(params: {
   return key;
 }
 
+/** Budget spreadsheets arrive already encrypted; the key carries no filename (it may hold personal data). */
+export async function uploadBudgetFileToR2(params: {
+  ownerUserId: string;
+  projectId: string;
+  encryptedBuffer: Buffer;
+}): Promise<string> {
+  const client = getR2Client();
+  const bucket = getBucketName();
+  const key = `budgets/${params.ownerUserId}/${params.projectId}/${randomUUID()}.enc`;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: params.encryptedBuffer,
+      ContentType: "application/octet-stream",
+    })
+  );
+
+  return key;
+}
+
 export async function getTemplateBufferFromR2(key: string): Promise<Buffer> {
   const client = getR2Client();
   const bucket = getBucketName();

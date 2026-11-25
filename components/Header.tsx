@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { UserButton, SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { ThemeToggle } from "./ThemeToggle";
-import { canCurrentUserAccessMerch, isCurrentUserAdmin } from "@/lib/admin";
+import { canCurrentUserAccessMerch, canCurrentUserManageProjects, isCurrentUserAdmin } from "@/lib/admin";
 import { AdminNavMenu } from "./AdminNavMenu";
 import { MobileNav } from "./MobileNav";
 
 export async function Header() {
-  const [canAccessAdmin, canAccessMerch] = await Promise.all([
+  const [canAccessAdmin, canAccessMerch, canAccessProjects] = await Promise.all([
     isCurrentUserAdmin(),
     canCurrentUserAccessMerch(),
+    canCurrentUserManageProjects(),
   ]);
 
   return (
@@ -36,6 +37,11 @@ export async function Header() {
               <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Lojinha</Button>
             </Link>
           )}
+          {canAccessProjects && (
+            <Link href="/projetos">
+              <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Projetos</Button>
+            </Link>
+          )}
           {canAccessAdmin && <AdminNavMenu />}
           <div className="ml-4 flex items-center gap-4 border-l pl-4 border-border">
             <ThemeToggle />
@@ -50,7 +56,7 @@ export async function Header() {
           </div>
         </nav>
 
-        <MobileNav canAccessAdmin={canAccessAdmin} canAccessMerch={canAccessMerch} />
+        <MobileNav canAccessAdmin={canAccessAdmin} canAccessMerch={canAccessMerch} canAccessProjects={canAccessProjects} />
       </div>
     </header>
   );

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 type MobileNavProps = {
   canAccessAdmin: boolean;
   canAccessMerch: boolean;
+  canAccessProjects: boolean;
 };
 
 const mainLinks = [
@@ -27,7 +28,7 @@ const adminLinks = [
   { href: "/admin/modelos-prontos/categorias", label: "Categorias de Modelos" },
 ];
 
-export function MobileNav({ canAccessAdmin, canAccessMerch }: MobileNavProps) {
+export function MobileNav({ canAccessAdmin, canAccessMerch, canAccessProjects }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -92,6 +93,16 @@ export function MobileNav({ canAccessAdmin, canAccessMerch }: MobileNavProps) {
                 className="rounded-md px-3 py-2 font-medium hover:bg-muted"
               >
                 Lojinha
+              </Link>
+            )}
+
+            {canAccessProjects && (
+              <Link
+                href="/projetos"
+                onClick={() => setIsOpen(false)}
+                className="rounded-md px-3 py-2 font-medium hover:bg-muted"
+              >
+                Projetos
               </Link>
             )}
 

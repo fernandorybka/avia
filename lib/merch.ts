@@ -1,3 +1,5 @@
+export { formatPrice, parsePrice } from "./money";
+
 export const MERCH_TIMEZONE = "America/Sao_Paulo";
 export const DEFAULT_MERCH_COLOR = "#a8a29e";
 
@@ -50,27 +52,6 @@ export function totalAvailable(products: MerchProduct[]): number {
     (sum, product) => sum + product.variants.reduce((acc, variant) => acc + variant.quantity, 0),
     0
   );
-}
-
-/**
- * Parses a price typed by a person ("60", "45,5", "R$ 1.234,56").
- * Returns null for empty or invalid input.
- */
-export function parsePrice(input: string | null | undefined): number | null {
-  if (!input) return null;
-  let cleaned = input.replace(/[^\d.,]/g, "");
-  if (!cleaned) return null;
-
-  if (cleaned.includes(",")) {
-    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-  }
-
-  const value = Number(cleaned);
-  return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
-}
-
-export function formatPrice(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 /** Calendar day (YYYY-MM-DD) in São Paulo time, used to group sales by night. */

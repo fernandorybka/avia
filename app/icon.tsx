@@ -2,8 +2,7 @@ import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-// Route segment config
-export const runtime = 'nodejs'
+// Runs on the Node.js runtime (the default; `runtime` config isn't allowed with cacheComponents)
 
 // Image metadata
 export const size = {

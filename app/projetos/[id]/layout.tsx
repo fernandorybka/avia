@@ -1,14 +1,24 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ProjectHeader } from "@/components/projects/ProjectHeader";
+import { ProjectsSkeleton } from "@/components/projects/ProjectsSkeleton";
 import { requireOwnedProjectForRender } from "@/lib/project-guard";
 
-export default async function ProjectLayout({
+export default function ProjectLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
+  return (
+    <Suspense fallback={<ProjectsSkeleton />}>
+      <OwnedProjectShell params={params}>{children}</OwnedProjectShell>
+    </Suspense>
+  );
+}
+
+async function OwnedProjectShell({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
   const access = await requireOwnedProjectForRender(id).catch(() => null);
   if (!access) {

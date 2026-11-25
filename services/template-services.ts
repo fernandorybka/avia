@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { templates, templatePlaceholders, documentGenerations } from "@/db/schema";
+import { templates, templatePlaceholders, documentGenerations, tagColors, cadastroGroupOrder } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 
@@ -19,7 +19,7 @@ export async function getTemplateWithDetails(slug: string, userId: string) {
 
       if (!template) return null;
 
-      const [placeholders, pastGenerations] = await Promise.all([
+      const [placeholders, pastGenerations, groupOrder] = await Promise.all([
         db
           .select()
           .from(templatePlaceholders)
@@ -28,17 +28,20 @@ export async function getTemplateWithDetails(slug: string, userId: string) {
         db
           .select({
             id: documentGenerations.id,
-            name: documentGenerations.name
+            name: documentGenerations.name,
+            groupName: documentGenerations.groupName
           })
           .from(documentGenerations)
           .where(eq(documentGenerations.userId, u))
-          .orderBy(documentGenerations.createdAt)
+          .orderBy(documentGenerations.name),
+        fetchGroupOrder(u)
       ]);
 
       return { 
         template, 
         placeholders, 
-        pastGenerations 
+        pastGenerations,
+        groupOrder
       };
     },
     ["template-detail"],
@@ -49,4 +52,33 @@ export async function getTemplateWithDetails(slug: string, userId: string) {
   );
 
   return cachedFn(slug, userId);
+}
+
+/** Level names in the user's custom order (uncached; callers cache it with their own data). */
+export async function fetchGroupOrder(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ groupName: cadastroGroupOrder.groupName })
+    .from(cadastroGroupOrder)
+    .where(eq(cadastroGroupOrder.userId, userId))
+    .orderBy(cadastroGroupOrder.position);
+
+  return rows.map(row => row.groupName);
+}
+
+/** Tag name -> color for the user, cached alongside the templates list. */
+export async function getTagColors(userId: string): Promise<Record<string, string>> {
+  const cachedFn = unstable_cache(
+    async (u: string) => {
+      const rows = await db
+        .select({ tag: tagColors.tag, color: tagColors.color })
+        .from(tagColors)
+        .where(eq(tagColors.userId, u));
+
+      return Object.fromEntries(rows.map(row => [row.tag, row.color]));
+    },
+    ["tag-colors"],
+    { tags: [`templates-${userId}`] }
+  );
+
+  return cachedFn(userId);
 }

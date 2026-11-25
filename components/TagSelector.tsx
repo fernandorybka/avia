@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { X, Plus, Check } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { TagBadge } from "./TagColors";
 
 interface TagSelectorProps {
   selectedTags: string[];
@@ -47,7 +47,7 @@ export function TagSelector({ selectedTags, onChange, allAvailableTags }: TagSel
   return (
     <div className="flex flex-wrap gap-2 items-center">
       {selectedTags.map((tag) => (
-        <Badge key={tag} variant="secondary" className="px-2 py-1 gap-1 group">
+        <TagBadge key={tag} tag={tag} variant="secondary" className="px-2 py-1 gap-1 group">
           {tag}
           <button
             type="button"
@@ -56,7 +56,7 @@ export function TagSelector({ selectedTags, onChange, allAvailableTags }: TagSel
           >
             <X className="w-3 h-3" />
           </button>
-        </Badge>
+        </TagBadge>
       ))}
 
       <Popover open={open} onOpenChange={setOpen}>

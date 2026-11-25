@@ -5,7 +5,8 @@ import {
   templates, 
   templatePlaceholders, 
   documentGenerations, 
-  documentGenerationValues 
+  documentGenerationValues,
+  cadastroGroupOrder
 } from "@/db/schema";
 import {
   parseDocxPlaceholders,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/docx-utils";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { sanitizeText, sanitizeRecord, sanitizeTags } from "@/lib/sanitize";
 import {
@@ -24,6 +25,7 @@ import {
   uploadTemplateToR2,
 } from "@/lib/r2";
 import { decryptFieldValue, encryptFieldValue } from "@/lib/field-encryption";
+import { normalizeGroupName } from "@/lib/cadastro-groups";
 
 
 export async function uploadTemplateAction(formData: FormData) {
@@ -156,7 +158,8 @@ export async function createGenerationAction(
   templateId: string,
   rawGenerationName: string,
   values: Record<string, string>,
-  shouldSave: Record<string, boolean>
+  shouldSave: Record<string, boolean>,
+  rawGroupName: string | null = null
 ) {
   const { userId } = await auth();
   if (!userId) {
@@ -167,6 +170,7 @@ export async function createGenerationAction(
   if (!generationName) throw new Error("O nome do cadastro é inválido.");
 
   const sanitizedValues = sanitizeRecord(values);
+  const groupName = normalizeGroupName(sanitizeText(rawGroupName ?? "", 255));
 
   let [generation] = await db
     .select()
@@ -180,9 +184,14 @@ export async function createGenerationAction(
   if (!generation) {
     const inserted = await db.insert(documentGenerations).values({
       name: generationName,
+      groupName,
       userId,
     }).returning();
     generation = inserted[0];
+  } else if (generation.groupName !== groupName) {
+    await db.update(documentGenerations)
+      .set({ groupName })
+      .where(eq(documentGenerations.id, generation.id));
   }
 
   const upsertPromises = Object.entries(sanitizedValues).map(async ([fieldKey, fieldValue]) => {
@@ -245,6 +254,49 @@ export async function fetchGenerationValuesAction(generationId: string) {
     ...value,
     fieldValue: decryptFieldValue(value.fieldValue),
   }));
+}
+
+export async function updateGenerationGroupAction(generationId: string, rawGroupName: string | null) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const groupName = normalizeGroupName(sanitizeText(rawGroupName ?? "", 255));
+
+  await db.update(documentGenerations)
+    .set({ groupName })
+    .where(and(
+      eq(documentGenerations.id, generationId),
+      eq(documentGenerations.userId, userId)
+    ));
+
+  updateTag(`cadastros-${userId}`);
+  revalidatePath("/cadastros");
+  return { success: true, groupName };
+}
+
+/** Saves the display order of the user's cadastro levels (first = top of the list). */
+export async function updateGroupOrderAction(rawGroupNames: string[]) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const groupNames = Array.from(new Set(
+    rawGroupNames
+      .map(name => normalizeGroupName(sanitizeText(name, 255)))
+      .filter((name): name is string => name !== null)
+  ));
+
+  if (groupNames.length > 0) {
+    await db.insert(cadastroGroupOrder)
+      .values(groupNames.map((groupName, position) => ({ userId, groupName, position })))
+      .onConflictDoUpdate({
+        target: [cadastroGroupOrder.userId, cadastroGroupOrder.groupName],
+        set: { position: sql`excluded.position` }
+      });
+  }
+
+  updateTag(`cadastros-${userId}`);
+  revalidatePath("/cadastros");
+  return { success: true, groupNames };
 }
 
 export async function deleteGenerationAction(generationId: string) {

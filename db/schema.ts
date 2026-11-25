@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, unique, boolean, integer, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, varchar, unique, boolean, integer, numeric, index } from "drizzle-orm/pg-core";
 
 export const templates = pgTable("templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -9,7 +9,20 @@ export const templates = pgTable("templates", {
   storageUrl: text("storage_url"), // R2 pointer (r2:key) or legacy Base64
   tags: text("tags").array().notNull().default([]), // List of tags for filtering
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("templates_user_id_idx").on(t.userId),
+]);
+
+// One color per tag name, per user, so the tag looks the same everywhere it shows up
+export const tagColors = pgTable("tag_colors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  tag: text("tag").notNull(),
+  color: varchar("color", { length: 7 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  unique().on(t.userId, t.tag)
+]);
 
 export const templatePlaceholders = pgTable("template_placeholders", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -17,14 +30,29 @@ export const templatePlaceholders = pgTable("template_placeholders", {
   placeholder: text("placeholder").notNull(), // ##NOME##
   fieldKey: text("field_key").notNull(), // NOME
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("template_placeholders_template_id_idx").on(t.templateId),
+]);
 
 export const documentGenerations = pgTable("document_generations", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: varchar("user_id", { length: 255 }).notNull(), // Mocked user_id
   name: text("name").notNull(), // Name for the profile/pre-fill
+  groupName: text("group_name"), // Parent level (e.g. a show or a venue); null = no level
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("document_generations_user_id_idx").on(t.userId),
+]);
+
+// Custom display order of cadastro levels; levels without a row sort alphabetically after these
+export const cadastroGroupOrder = pgTable("cadastro_group_order", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  groupName: text("group_name").notNull(),
+  position: integer("position").notNull(),
+}, (t) => [
+  unique().on(t.userId, t.groupName)
+]);
 
 export const documentGenerationValues = pgTable("document_generation_values", {
   id: uuid("id").primaryKey().defaultRandom(),

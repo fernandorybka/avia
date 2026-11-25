@@ -9,6 +9,7 @@ import { CadastrosViewer } from "@/components/CadastrosViewer";
 
 import { unstable_cache } from "next/cache";
 import { decryptFieldValue } from "@/lib/field-encryption";
+import { fetchGroupOrder } from "@/services/template-services";
 
 export default async function CadastrosPage() {
   await connection();
@@ -20,15 +21,19 @@ export default async function CadastrosPage() {
 
   const getCachedData = unstable_cache(
     async (uid: string) => {
-      const generations = await db
-        .select({
-          id: documentGenerations.id,
-          name: documentGenerations.name,
-          createdAt: documentGenerations.createdAt,
-        })
-        .from(documentGenerations)
-        .where(eq(documentGenerations.userId, uid))
-        .orderBy(documentGenerations.name);
+      const [generations, groupOrder] = await Promise.all([
+        db
+          .select({
+            id: documentGenerations.id,
+            name: documentGenerations.name,
+            groupName: documentGenerations.groupName,
+            createdAt: documentGenerations.createdAt,
+          })
+          .from(documentGenerations)
+          .where(eq(documentGenerations.userId, uid))
+          .orderBy(documentGenerations.name),
+        fetchGroupOrder(uid),
+      ]);
 
       const generationIds = generations.map(g => g.id);
       
@@ -55,13 +60,13 @@ export default async function CadastrosPage() {
         return acc;
       }, {} as Record<string, typeof values>);
 
-      return { generations, groupedValues };
+      return { generations, groupedValues, groupOrder };
     },
     [`cadastros-${userId}`],
     { tags: [`cadastros-${userId}`] }
   );
 
-  const { generations, groupedValues } = await getCachedData(userId);
+  const { generations, groupedValues, groupOrder } = await getCachedData(userId);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -81,7 +86,7 @@ export default async function CadastrosPage() {
             </div>
           </div>
 
-          <CadastrosViewer generations={generations} groupedValues={groupedValues} />
+          <CadastrosViewer generations={generations} groupedValues={groupedValues} groupOrder={groupOrder} />
         </div>
       </main>
     </div>

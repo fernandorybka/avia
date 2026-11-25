@@ -17,9 +17,12 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GroupedCadastroSelectItems, GroupPicker } from "./CadastroGroups";
+import { listGroupNames } from "@/lib/cadastro-groups";
 
 interface Placeholder {
   fieldKey: string;
@@ -29,10 +32,11 @@ interface TemplateFormProps {
   templateId: string;
   templateName: string;
   placeholders: Placeholder[];
-  pastGenerations?: { id: string; name: string }[];
+  pastGenerations?: { id: string; name: string; groupName: string | null }[];
+  groupOrder?: string[];
 }
 
-export function TemplateForm({ templateId, templateName, placeholders: initialPlaceholders, pastGenerations = [] }: TemplateFormProps) {
+export function TemplateForm({ templateId, templateName, placeholders: initialPlaceholders, pastGenerations = [], groupOrder = [] }: TemplateFormProps) {
   const router = useRouter();
   const placeholders = useMemo(() => {
     return [...initialPlaceholders].sort((a, b) => {
@@ -45,6 +49,8 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
   }, [initialPlaceholders]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string>("new");
+  const [groupName, setGroupName] = useState<string | null>(null);
+  const groupNames = useMemo(() => listGroupNames(pastGenerations, groupOrder), [pastGenerations, groupOrder]);
   const [shouldSaveMap, setShouldSaveMap] = useState<Record<string, boolean>>(() => {
     return placeholders.reduce((acc, p) => ({ ...acc, [p.fieldKey]: true }), {});
   });
@@ -61,6 +67,11 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
     resolver: zodResolver(schema),
     defaultValues: placeholders.reduce((acc, p) => ({ ...acc, [p.fieldKey]: "" }), {}),
   });
+
+  // Picking a cadastro brings its level along; a blank form starts without one
+  useEffect(() => {
+    setGroupName(pastGenerations.find(g => g.id === selectedProfile)?.groupName ?? null);
+  }, [selectedProfile, pastGenerations]);
 
   useEffect(() => {
     let active = true;
@@ -135,7 +146,7 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
     
     setIsSubmitting(true);
     try {
-      const response = await createGenerationAction(templateId, genName.trim(), data, shouldSaveMap);
+      const response = await createGenerationAction(templateId, genName.trim(), data, shouldSaveMap, groupName);
 
       const downloadResponse = await fetch("/api/download", {
         method: "POST",
@@ -219,13 +230,24 @@ export function TemplateForm({ templateId, templateName, placeholders: initialPl
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">-- Novo Preenchimento (Em branco) --</SelectItem>
-                  {pastGenerations.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
+                  {pastGenerations.length > 0 && <SelectSeparator />}
+                  <GroupedCadastroSelectItems items={pastGenerations} order={groupOrder} />
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="group-picker" className="text-foreground font-semibold">
+                Nível
+              </Label>
+              <GroupPicker
+                id="group-picker"
+                value={groupName}
+                onChange={setGroupName}
+                groupNames={groupNames}
+              />
+              <p className="text-xs text-muted-foreground">
+                Grupo ao qual este cadastro pertence (ex.: um espetáculo ou um teatro). Salvo ao gerar o documento.
+              </p>
             </div>
           </div>
 

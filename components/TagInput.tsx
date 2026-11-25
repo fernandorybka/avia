@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { X, Plus, Check } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { TagBadge } from "./TagColors";
 import { updateTemplateTags } from "@/services/tag-actions";
 import { toast } from "sonner";
 
@@ -64,7 +64,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
   return (
     <div className="flex flex-wrap gap-2 items-center">
       {tags.map((tag) => (
-        <Badge key={tag} variant="secondary" className="px-2 py-1 gap-1 group">
+        <TagBadge key={tag} tag={tag} variant="secondary" className="px-2 py-1 gap-1 group">
           {tag}
           <button
             onClick={() => handleRemoveTag(tag)}
@@ -72,7 +72,7 @@ export function TagInput({ templateId, initialTags, allAvailableTags }: TagInput
           >
             <X className="w-3 h-3" />
           </button>
-        </Badge>
+        </TagBadge>
       ))}
 
       <Popover open={open} onOpenChange={setOpen}>

@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { UserCircle2, Key, Calendar, Trash2 } from "lucide-react";
+import { UserCircle2, Key, Calendar, Trash2, ListOrdered } from "lucide-react";
 import { Button } from "./ui/button";
-import { deleteGenerationAction } from "@/services/document-actions";
+import { deleteGenerationAction, updateGenerationGroupAction, updateGroupOrderAction } from "@/services/document-actions";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -19,14 +19,16 @@ import {
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GroupedCadastroSelectItems, GroupOrderEditor, GroupPicker } from "./CadastroGroups";
+import { groupCadastros, listGroupNames } from "@/lib/cadastro-groups";
 
 type Generation = {
   id: string;
   name: string;
+  groupName: string | null;
   createdAt: Date;
 };
 
@@ -40,16 +42,52 @@ type Value = {
 interface CadastrosViewerProps {
   generations: Generation[];
   groupedValues: Record<string, Value[]>;
+  groupOrder: string[];
 }
 
 export function CadastrosViewer({ 
   generations: initialGenerations, 
-  groupedValues: initialGroupedValues 
+  groupedValues: initialGroupedValues,
+  groupOrder: initialGroupOrder
 }: CadastrosViewerProps) {
   const [generations, setGenerations] = useState<Generation[]>(initialGenerations);
   const [groupedValues, setGroupedValues] = useState<Record<string, Value[]>>(initialGroupedValues);
-  const [selectedId, setSelectedId] = useState<string>(initialGenerations[0]?.id || "");
+  const [groupOrder, setGroupOrder] = useState<string[]>(initialGroupOrder);
+  // Start on the first cadastro as the grouped select lists them
+  const [selectedId, setSelectedId] = useState<string>(
+    () => groupCadastros(initialGenerations, initialGroupOrder)[0]?.items[0]?.id || ""
+  );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
+  const groupNames = useMemo(() => listGroupNames(generations, groupOrder), [generations, groupOrder]);
+
+  const changeGroupOrder = async (nextOrder: string[]) => {
+    const previous = groupOrder;
+    setGroupOrder(nextOrder);
+    try {
+      await updateGroupOrderAction(nextOrder);
+    } catch (error) {
+      setGroupOrder(previous);
+      toast.error("Erro ao salvar a ordem dos níveis.");
+      console.error(error);
+    }
+  };
+
+  const changeGroup = async (groupName: string | null) => {
+    if (!selectedId) return;
+
+    setIsSavingGroup(true);
+    try {
+      const result = await updateGenerationGroupAction(selectedId, groupName);
+      setGenerations(prev => prev.map(g => g.id === selectedId ? { ...g, groupName: result.groupName } : g));
+      toast.success("Nível atualizado.");
+    } catch (error) {
+      toast.error("Erro ao alterar o nível.");
+      console.error(error);
+    } finally {
+      setIsSavingGroup(false);
+    }
+  };
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const confirmDelete = async () => {
@@ -68,7 +106,7 @@ export function CadastrosViewer({
       delete newGroupedValues[selectedId];
       setGroupedValues(newGroupedValues);
 
-      setSelectedId(newGenerations[0]?.id || "");
+      setSelectedId(groupCadastros(newGenerations, groupOrder)[0]?.items[0]?.id || "");
       setShowDeleteDialog(false);
     } catch (error) {
       toast.error("Erro ao excluir perfil.");
@@ -113,15 +151,24 @@ export function CadastrosViewer({
               <SelectValue placeholder="Selecione um registro" />
             </SelectTrigger>
             <SelectContent>
-              {generations.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name}
-                </SelectItem>
-              ))}
+              <GroupedCadastroSelectItems items={generations} order={groupOrder} />
             </SelectContent>
           </Select>
         </div>
       </div>
+
+      {groupNames.length > 1 && (
+        <details className="p-4 bg-muted/50 rounded-xl border border-border max-w-md mx-auto">
+          <summary className="text-sm font-semibold text-foreground cursor-pointer flex items-center gap-2">
+            <ListOrdered className="w-4 h-4" />
+            Ordem dos níveis
+          </summary>
+          <p className="text-xs text-muted-foreground mt-2 mb-3">
+            Define a ordem em que os níveis aparecem nas listas de cadastros.
+          </p>
+          <GroupOrderEditor groupNames={groupNames} onChange={changeGroupOrder} />
+        </details>
+      )}
 
       {selectedGen && (
         <Card className="border-border shadow-sm overflow-hidden flex flex-col max-w-2xl mx-auto">
@@ -148,6 +195,18 @@ export function CadastrosViewer({
               </Button>
           </CardHeader>
           <CardContent className="pt-4">
+            <div className="space-y-2 mb-4 pb-4 border-b border-border/50">
+              <label htmlFor="group-picker" className="text-sm font-semibold text-foreground">
+                Nível
+              </label>
+              <GroupPicker
+                id="group-picker"
+                value={selectedGen.groupName}
+                onChange={changeGroup}
+                groupNames={groupNames}
+                disabled={isSavingGroup}
+              />
+            </div>
             {genValues.length === 0 ? (
               <p className="text-sm text-muted-foreground italic text-center py-6">Nenhuma variável vinculada a este registro.</p>
             ) : (

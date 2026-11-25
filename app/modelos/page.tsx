@@ -1,53 +1,82 @@
 import { db } from "@/db";
 import { templates as templatesTable } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
-import { getAllUserTags } from "@/services/tag-actions";
 import { DashboardContainer } from "@/components/DashboardContainer";
-import { getTemplateWithDetails } from "@/services/template-services";
+import { getTagColors, getTemplateWithDetails } from "@/services/template-services";
 import { FileText, PackageOpen } from "lucide-react";
 import { WorkflowInfographic } from "@/components/WorkflowInfographic";
 import { Button } from "@/components/ui/button";
+import { paginate, parseListParam, parsePageParam, TEMPLATES_PER_PAGE } from "@/lib/pagination";
 
-async function DashboardContent() {
+type ModelosSearchParams = { pagina?: string | string[]; etiqueta?: string | string[] };
+
+async function DashboardContent({ searchParams }: { searchParams: Promise<ModelosSearchParams> }) {
   const { userId } = await auth();
   if (!userId) return null;
 
-  const allAvailableTags = await getAllUserTags();
-
   const getCachedTemplates = unstable_cache(
     async (uid: string) => {
+      // Only what the cards need: `content` holds the whole extracted document text
+      // and would otherwise be serialized to the browser for every template.
       return await db
-        .select()
+        .select({
+          id: templatesTable.id,
+          name: templatesTable.name,
+          slug: templatesTable.slug,
+          tags: templatesTable.tags,
+          createdAt: templatesTable.createdAt,
+        })
         .from(templatesTable)
         .where(eq(templatesTable.userId, uid))
         .orderBy(desc(templatesTable.createdAt));
     },
-    ["templates-list"],
+    ["templates-list-cards"],
     { tags: [`templates-${userId}`] }
   );
 
-  const allTemplates = await getCachedTemplates(userId);
+  const [allTemplates, tagColors] = await Promise.all([
+    getCachedTemplates(userId),
+    getTagColors(userId),
+  ]);
 
-  // Prefetch details for all templates to warm up the cache
-  // This makes navigation to individual templates instant
-  await Promise.all(allTemplates.map(template => 
-    getTemplateWithDetails(template.slug, userId)
-  ));
+  // Derived from the list above instead of querying every template again
+  const allAvailableTags = Array.from(
+    new Set(allTemplates.flatMap(template => template.tags || []))
+  ).sort();
+
+  // Filter and paginate here so the browser only receives the cards it shows
+  const params = await searchParams;
+  const selectedTags = parseListParam(params.etiqueta).filter(tag => allAvailableTags.includes(tag));
+  const filteredTemplates = selectedTags.length === 0
+    ? allTemplates
+    : allTemplates.filter(template => selectedTags.some(tag => (template.tags || []).includes(tag)));
+  const currentPage = paginate(filteredTemplates, parsePageParam(params.pagina), TEMPLATES_PER_PAGE);
+
+  // Warm the cache of the models on this page after the response is sent, so opening
+  // one stays fast without making the list wait for 3 queries per model.
+  after(() =>
+    Promise.all(currentPage.items.map(template => getTemplateWithDetails(template.slug, userId)))
+  );
 
   return (
     <DashboardContainer 
-      initialTemplates={allTemplates} 
-      allAvailableTags={allAvailableTags} 
+      initialTemplates={currentPage.items}
+      allAvailableTags={allAvailableTags}
+      selectedTags={selectedTags}
+      page={currentPage.page}
+      totalPages={currentPage.totalPages}
+      totalTemplates={currentPage.totalItems}
+      tagColors={tagColors}
     />
   );
 }
 
-export default async function ModelosPage() {
+export default async function ModelosPage({ searchParams }: { searchParams: Promise<ModelosSearchParams> }) {
   await connection();
 
   return (
@@ -90,7 +119,7 @@ export default async function ModelosPage() {
           <WorkflowInfographic />
 
           <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Carregando painel...</div>}>
-            <DashboardContent />
+            <DashboardContent searchParams={searchParams} />
           </Suspense>
         </div>
       </main>

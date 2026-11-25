@@ -20,7 +20,7 @@ export default async function ModeloPage({ params }: { params: Promise<{ slug: s
     notFound();
   }
 
-  const { template, placeholders, pastGenerations } = result;
+  const { template, placeholders, pastGenerations, groupOrder } = result;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -30,6 +30,7 @@ export default async function ModeloPage({ params }: { params: Promise<{ slug: s
           templateName={template.name} 
           placeholders={placeholders} 
           pastGenerations={pastGenerations}
+          groupOrder={groupOrder}
         />
       </main>
     </div>

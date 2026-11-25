@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Badge } from "@/components/ui/badge";
+import { TagBadge } from "./TagColors";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,8 +35,10 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
         {safeAvailableTags.map((tag) => {
           const isSelected = safeSelectedTags.includes(tag);
           return (
-            <Badge
+            <TagBadge
               key={tag}
+              tag={tag}
+              tone={isSelected ? "solid" : "soft"}
               variant={isSelected ? "default" : "outline"}
               className={cn(
                 "cursor-pointer transition-all px-3 py-1 flex items-center gap-1",
@@ -48,7 +50,7 @@ export function TagFilter({ availableTags, selectedTags, onToggleTag, onClear }:
               {isSelected && (
                 <X className="w-3 h-3" />
               )}
-            </Badge>
+            </TagBadge>
           );
         })}
       </div>

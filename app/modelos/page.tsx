@@ -16,6 +16,8 @@ import { paginate, parseListParam, parsePageParam, TEMPLATES_PER_PAGE } from "@/
 type ModelosSearchParams = { pagina?: string | string[]; etiqueta?: string | string[] };
 
 async function DashboardContent({ searchParams }: { searchParams: Promise<ModelosSearchParams> }) {
+  // Per-request data lives here, inside the page's Suspense, so the heading renders at once
+  await connection();
   const { userId } = await auth();
   if (!userId) return null;
 
@@ -76,9 +78,7 @@ async function DashboardContent({ searchParams }: { searchParams: Promise<Modelo
   );
 }
 
-export default async function ModelosPage({ searchParams }: { searchParams: Promise<ModelosSearchParams> }) {
-  await connection();
-
+export default function ModelosPage({ searchParams }: { searchParams: Promise<ModelosSearchParams> }) {
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       <main className="container mx-auto px-4 pt-28">

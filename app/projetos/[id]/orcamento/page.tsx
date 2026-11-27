@@ -1,11 +1,11 @@
 import { BudgetImport } from "@/components/projects/BudgetImport";
-import { requireOwnedProjectForRender } from "@/lib/project-guard";
-import { getBudgetPageData, getProjectData } from "@/services/project-services";
+import { getBudgetPageData, getOwnedProjectDataForRender } from "@/services/project-services";
 
 export default async function ProjectBudgetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { userId, project } = await requireOwnedProjectForRender(id);
-  const [page, data] = await Promise.all([getBudgetPageData(project.id), getProjectData(project.id, userId)]);
+  // Ownership is checked inside the batched read; the budget versions are only read after it
+  const { projectId, data } = await getOwnedProjectDataForRender(id);
+  const page = await getBudgetPageData(projectId);
 
   const currentItems = data.items.map((item) => ({
     id: item.id,
@@ -17,5 +17,5 @@ export default async function ProjectBudgetPage({ params }: { params: Promise<{ 
     status: item.status,
   }));
 
-  return <BudgetImport projectId={project.id} page={page} currentItems={currentItems} />;
+  return <BudgetImport projectId={projectId} page={page} currentItems={currentItems} />;
 }

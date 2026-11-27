@@ -1,7 +1,8 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { cache } from "react";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
   budgetItems,
@@ -13,6 +14,8 @@ import {
   projects,
 } from "@/db/schema";
 import { decryptFieldValue } from "@/lib/field-encryption";
+import { canAccessProject } from "@/lib/project-access";
+import { ProjectAccessError, requireProjectManager } from "@/lib/project-guard";
 import {
   checklistStatus,
   DEFAULT_PAYMENT_TYPES,
@@ -133,15 +136,18 @@ async function seedDefaultPaymentTypes(ownerUserId: string): Promise<void> {
   }
 }
 
-/** Types and their checklist items in a single round trip (each Neon query costs ~100 ms). */
-async function loadPaymentTypes(ownerUserId: string): Promise<PaymentTypeView[]> {
-  const rows = await db
+function paymentTypesQuery(ownerUserId: string) {
+  return db
     .select({ type: paymentTypes, item: paymentTypeChecklistItems })
     .from(paymentTypes)
     .leftJoin(paymentTypeChecklistItems, eq(paymentTypeChecklistItems.paymentTypeId, paymentTypes.id))
     .where(eq(paymentTypes.ownerUserId, ownerUserId))
     .orderBy(asc(paymentTypes.position), asc(paymentTypes.createdAt), asc(paymentTypeChecklistItems.position));
+}
 
+type PaymentTypeRow = Awaited<ReturnType<typeof paymentTypesQuery>>[number];
+
+function groupPaymentTypes(rows: PaymentTypeRow[]): PaymentTypeView[] {
   const types = new Map<string, PaymentTypeView>();
   for (const { type, item } of rows) {
     let view = types.get(type.id);
@@ -156,6 +162,11 @@ async function loadPaymentTypes(ownerUserId: string): Promise<PaymentTypeView[]>
   return [...types.values()];
 }
 
+/** Types and their checklist items in a single round trip (each Neon query costs ~100 ms). */
+async function loadPaymentTypes(ownerUserId: string): Promise<PaymentTypeView[]> {
+  return groupPaymentTypes(await paymentTypesQuery(ownerUserId));
+}
+
 export async function getPaymentTypes(ownerUserId: string): Promise<PaymentTypeView[]> {
   const types = await loadPaymentTypes(ownerUserId);
   if (types.length > 0) return types;
@@ -164,27 +175,64 @@ export async function getPaymentTypes(ownerUserId: string): Promise<PaymentTypeV
   return loadPaymentTypes(ownerUserId);
 }
 
-export async function getProjectData(projectId: string, ownerUserId: string): Promise<ProjectData> {
-  // All independent: one parallel round of queries instead of a chain
-  const [itemRows, paymentRows, types, stateRows] = await Promise.all([
-    db
-      .select()
-      .from(budgetItems)
-      .where(and(eq(budgetItems.projectId, projectId), ne(budgetItems.status, "removed")))
-      .orderBy(asc(budgetItems.position)),
-    db.select().from(payments).where(eq(payments.projectId, projectId)),
-    getPaymentTypes(ownerUserId),
-    db
-      .select({
-        paymentId: paymentChecklistStates.paymentId,
-        checklistItemId: paymentChecklistStates.checklistItemId,
-        state: paymentChecklistStates.state,
-      })
-      .from(paymentChecklistStates)
-      .innerJoin(payments, eq(payments.id, paymentChecklistStates.paymentId))
-      .where(eq(payments.projectId, projectId)),
-  ]);
+/**
+ * The project tabs' single read: ownership check and all their data in ONE Neon round trip
+ * (db.batch sends every query in one HTTP request). Replaces requireOwnedProject + a second
+ * round of queries, which made each tab switch wait for two trips to the database.
+ * Every data query is also scoped to "this id AND owned by this user" in SQL, so nothing
+ * from someone else's project is read even before the ownership check below runs.
+ */
+export const getOwnedProjectDataForRender = cache(
+  async (projectId: string): Promise<{ userId: string; projectId: string; data: ProjectData }> => {
+    const userId = await requireProjectManager();
+    if (!/^[0-9a-f-]{36}$/i.test(projectId)) {
+      throw new ProjectAccessError();
+    }
 
+    const ownedProject = and(eq(projects.id, projectId), eq(projects.ownerUserId, userId));
+    const ownedProjectIds = db.select({ id: projects.id }).from(projects).where(ownedProject);
+
+    const [projectRows, itemRows, paymentRows, typeRows, stateRows] = await db.batch([
+      db.select({ ownerUserId: projects.ownerUserId }).from(projects).where(ownedProject).limit(1),
+      db
+        .select()
+        .from(budgetItems)
+        .where(and(inArray(budgetItems.projectId, ownedProjectIds), ne(budgetItems.status, "removed")))
+        .orderBy(asc(budgetItems.position)),
+      db.select().from(payments).where(inArray(payments.projectId, ownedProjectIds)),
+      paymentTypesQuery(userId),
+      db
+        .select({
+          paymentId: paymentChecklistStates.paymentId,
+          checklistItemId: paymentChecklistStates.checklistItemId,
+          state: paymentChecklistStates.state,
+        })
+        .from(paymentChecklistStates)
+        .innerJoin(payments, eq(payments.id, paymentChecklistStates.paymentId))
+        .where(inArray(payments.projectId, ownedProjectIds)),
+    ]);
+
+    const [project] = projectRows;
+    if (!project || !canAccessProject({ userId, isManager: true, projectOwnerUserId: project.ownerUserId })) {
+      throw new ProjectAccessError();
+    }
+
+    // First visit ever: no types yet (rare, costs the extra trips only once per user)
+    let types = groupPaymentTypes(typeRows);
+    if (types.length === 0) {
+      types = await getPaymentTypes(userId);
+    }
+
+    return { userId, projectId, data: buildProjectData(itemRows, paymentRows, types, stateRows) };
+  }
+);
+
+function buildProjectData(
+  itemRows: (typeof budgetItems.$inferSelect)[],
+  paymentRows: (typeof payments.$inferSelect)[],
+  types: PaymentTypeView[],
+  stateRows: { paymentId: string; checklistItemId: string; state: ChecklistState }[]
+): ProjectData {
   const typeById = new Map(types.map((type) => [type.id, type]));
   const statesByPayment = new Map<string, Record<string, ChecklistState>>();
   for (const row of stateRows) {

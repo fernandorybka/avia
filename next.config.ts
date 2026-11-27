@@ -2,9 +2,14 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true, 
+  cacheComponents: true,
   reactCompiler: true,
   experimental: {
+    // Reuse a page already visited for 30 s on client navigation (e.g. switching project tabs).
+    // Safe because every server action calls revalidatePath/router.refresh, which clears this cache.
+    staleTimes: {
+      dynamic: 30,
+    },
     serverActions: {
       // Budget spreadsheets go up to 2 MB (lib/budget-sheet.ts) plus multipart overhead
       bodySizeLimit: "3mb",

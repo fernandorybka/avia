@@ -13,13 +13,13 @@ import {
   summarizeBudget,
 } from "./projects";
 
-test("default types cover the five kinds and Devolução requires the letter", () => {
-  assert.equal(DEFAULT_PAYMENT_TYPES.length, 5);
+test("default types cover the six kinds and Devolução requires the letter", () => {
+  assert.equal(DEFAULT_PAYMENT_TYPES.length, 6);
   const devolucao = DEFAULT_PAYMENT_TYPES.find((type) => type.name === "Devolução");
   assert.ok(devolucao);
   assert.equal(devolucao.budgetItemOptional, true);
   assert.deepEqual(devolucao.items[0], { label: "Carta de devolução", allowNotApplicable: false });
-  assert.equal(new Set(DEFAULT_PAYMENT_TYPES.map((type) => type.name)).size, 5);
+  assert.equal(new Set(DEFAULT_PAYMENT_TYPES.map((type) => type.name)).size, 6);
 });
 
 test("checklistStatus counts done and allowed N/A, ignores archived items", () => {

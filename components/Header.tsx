@@ -5,6 +5,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { canCurrentUserAccessMerch, canCurrentUserManageProjects, isCurrentUserAdmin } from "@/lib/admin";
 import { AdminNavMenu } from "./AdminNavMenu";
 import { MobileNav } from "./MobileNav";
+import { navItemClass } from "./nav-styles";
 
 export async function Header() {
   const [canAccessAdmin, canAccessMerch, canAccessProjects] = await Promise.all([
@@ -20,27 +21,15 @@ export async function Header() {
           avia!
         </Link>
         <nav className="hidden items-center gap-4 md:flex">
-          <Link href="/modelos">
-            <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Modelos</Button>
-          </Link>
-          <Link href="/cadastros">
-            <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Cadastros</Button>
-          </Link>
-          <Link href="/modelos-prontos">
-            <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Modelos Prontos</Button>
-          </Link>
-          <Link href="/ajuda">
-            <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Ajuda</Button>
-          </Link>
+          <Link href="/modelos" className={navItemClass}>Modelos</Link>
+          <Link href="/cadastros" className={navItemClass}>Cadastros</Link>
+          <Link href="/modelos-prontos" className={navItemClass}>Modelos Prontos</Link>
+          <Link href="/ajuda" className={navItemClass}>Ajuda</Link>
           {canAccessMerch && (
-            <Link href="/merch">
-              <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Lojinha</Button>
-            </Link>
+            <Link href="/merch" className={navItemClass}>Lojinha</Link>
           )}
           {canAccessProjects && (
-            <Link href="/projetos">
-              <Button variant="ghost" className="cursor-pointer hover:bg-muted font-medium px-4 h-9">Projetos</Button>
-            </Link>
+            <Link href="/projetos" className={navItemClass}>Projetos</Link>
           )}
           {canAccessAdmin && <AdminNavMenu />}
           <div className="ml-4 flex items-center gap-4 border-l pl-4 border-border">

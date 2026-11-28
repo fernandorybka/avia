@@ -18,35 +18,42 @@ export const DEFAULT_PAYMENT_TYPES: PaymentTypeDefinition[] = [
     name: "Pessoa física (PF)",
     budgetItemOptional: false,
     items: [
-      { label: "Recibo/RPA assinado", allowNotApplicable: false },
+      { label: "Contrato", allowNotApplicable: false },
+      { label: "RPA", allowNotApplicable: false },
       { label: "Comprovante de pagamento", allowNotApplicable: false },
-      { label: "Documento de identificação e CPF", allowNotApplicable: false },
-      { label: "Guia de retenção (INSS/IRRF/ISS)", allowNotApplicable: true },
+      { label: "Recibo", allowNotApplicable: false },
+      { label: "CPF e RG", allowNotApplicable: false },
+      { label: "Cartão PIS/PASEP/NIT/NIS", allowNotApplicable: false },
+      { label: "Cartão CIM", allowNotApplicable: false },
+      { label: "Comprovante de endereço", allowNotApplicable: false },
     ],
   },
   {
     name: "Pessoa jurídica (PJ)",
     budgetItemOptional: false,
     items: [
+      { label: "Contrato", allowNotApplicable: false },
       { label: "Nota fiscal", allowNotApplicable: false },
       { label: "Comprovante de pagamento", allowNotApplicable: false },
-      { label: "Orçamento ou contrato", allowNotApplicable: true },
+      { label: "Recibo", allowNotApplicable: false },
+      { label: "CCMEI / Contrato Social / Ata", allowNotApplicable: false },
+      { label: "Cartão CNPJ", allowNotApplicable: false },
     ],
   },
   {
     name: "Compra",
     budgetItemOptional: false,
     items: [
-      { label: "Nota fiscal ou cupom", allowNotApplicable: false },
+      { label: "Nota fiscal", allowNotApplicable: false },
       { label: "Comprovante de pagamento", allowNotApplicable: false },
-      { label: "Cotações", allowNotApplicable: true },
+      { label: "Recibo", allowNotApplicable: false },
     ],
   },
   {
-    name: "DARF",
+    name: "DARF/GPS/GRU",
     budgetItemOptional: false,
     items: [
-      { label: "Guia DARF", allowNotApplicable: false },
+      { label: "Guia DARF/GPS/GRU", allowNotApplicable: false },
       { label: "Comprovante de pagamento", allowNotApplicable: false },
     ],
   },
@@ -56,6 +63,15 @@ export const DEFAULT_PAYMENT_TYPES: PaymentTypeDefinition[] = [
     items: [
       { label: "Carta de devolução", allowNotApplicable: false },
       { label: "Comprovante de depósito/transferência", allowNotApplicable: false },
+    ],
+  },
+  {
+    name: "Aluguel",
+    budgetItemOptional: false,
+    items: [
+      { label: "Contrato", allowNotApplicable: false },
+      { label: "Comprovante de pagamento", allowNotApplicable: false },
+      { label: "Recibo", allowNotApplicable: false },
     ],
   },
 ];

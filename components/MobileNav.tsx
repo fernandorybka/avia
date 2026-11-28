@@ -80,7 +80,7 @@ export function MobileNav({ canAccessAdmin, canAccessMerch, canAccessProjects }:
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="rounded-md px-3 py-2 font-medium hover:bg-muted"
+                className="rounded-md px-3 py-2 font-medium transition-colors hover:bg-primary/10 hover:text-primary"
               >
                 {link.label}
               </Link>
@@ -90,7 +90,7 @@ export function MobileNav({ canAccessAdmin, canAccessMerch, canAccessProjects }:
               <Link
                 href="/merch"
                 onClick={() => setIsOpen(false)}
-                className="rounded-md px-3 py-2 font-medium hover:bg-muted"
+                className="rounded-md px-3 py-2 font-medium transition-colors hover:bg-primary/10 hover:text-primary"
               >
                 Lojinha
               </Link>
@@ -100,7 +100,7 @@ export function MobileNav({ canAccessAdmin, canAccessMerch, canAccessProjects }:
               <Link
                 href="/projetos"
                 onClick={() => setIsOpen(false)}
-                className="rounded-md px-3 py-2 font-medium hover:bg-muted"
+                className="rounded-md px-3 py-2 font-medium transition-colors hover:bg-primary/10 hover:text-primary"
               >
                 Projetos
               </Link>
@@ -116,7 +116,7 @@ export function MobileNav({ canAccessAdmin, canAccessMerch, canAccessProjects }:
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
-                    className="rounded-md px-3 py-2 font-medium hover:bg-muted"
+                    className="rounded-md px-3 py-2 font-medium transition-colors hover:bg-primary/10 hover:text-primary"
                   >
                     {link.label}
                   </Link>

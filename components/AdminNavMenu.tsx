@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
-import { buttonVariants } from "./ui/button";
+import { navItemClass } from "./nav-styles";
 
 export function AdminNavMenu() {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -43,7 +43,7 @@ export function AdminNavMenu() {
   return (
     <details ref={detailsRef} className="relative group">
       <summary
-        className={`${buttonVariants({ variant: "ghost" })} hover:bg-muted font-medium px-4 h-9 list-none [&::-webkit-details-marker]:hidden`}
+        className={`${navItemClass} list-none group-open:bg-primary/10 group-open:text-primary [&::-webkit-details-marker]:hidden`}
       >
         <span className="inline-flex items-center gap-2">
           Admin
@@ -51,27 +51,27 @@ export function AdminNavMenu() {
         </span>
       </summary>
       <div className="absolute right-0 mt-2 w-56 rounded-lg border bg-background shadow-lg p-1">
-        <Link href="/admin" onClick={closeMenu} className="block rounded-md px-3 py-2 text-sm hover:bg-muted">
+        <Link href="/admin" onClick={closeMenu} className="block rounded-md px-3 py-2 text-sm transition-colors hover:bg-primary/10 hover:text-primary">
           Painel Admin
         </Link>
         <Link
           href="/admin/modelos-prontos"
           onClick={closeMenu}
-          className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          className="block rounded-md px-3 py-2 text-sm transition-colors hover:bg-primary/10 hover:text-primary"
         >
           Modelos Prontos
         </Link>
         <Link
           href="/admin/modelos-prontos/lote"
           onClick={closeMenu}
-          className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          className="block rounded-md px-3 py-2 text-sm transition-colors hover:bg-primary/10 hover:text-primary"
         >
           Publicação em Lote
         </Link>
         <Link
           href="/admin/modelos-prontos/categorias"
           onClick={closeMenu}
-          className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          className="block rounded-md px-3 py-2 text-sm transition-colors hover:bg-primary/10 hover:text-primary"
         >
           Categorias de Modelos
         </Link>

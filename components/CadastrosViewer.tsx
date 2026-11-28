@@ -117,6 +117,16 @@ export function CadastrosViewer({
   };
 
 
+  const copyValue = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Copiado!", { duration: 1500 });
+    } catch (error) {
+      toast.error("Não foi possível copiar.");
+      console.error(error);
+    }
+  };
+
   const selectedGen = generations.find(g => g.id === selectedId);
   
   const genValues = useMemo(() => {
@@ -217,9 +227,14 @@ export function CadastrosViewer({
                       <Key className="w-4 h-4 text-muted-foreground/60" />
                       {v.fieldKey.replace(/_/g, " ")}
                     </div>
-                    <span className="text-foreground max-w-[60%] font-mono text-sm bg-muted px-2 py-1 rounded select-all break-all text-right">
+                    <button
+                      type="button"
+                      onClick={() => copyValue(v.fieldValue)}
+                      title="Clique para copiar"
+                      className="text-foreground max-w-[60%] font-mono text-sm bg-muted px-2 py-1 rounded break-all text-right cursor-pointer transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       {v.fieldValue}
-                    </span>
+                    </button>
                   </div>
                 ))}
               </div>

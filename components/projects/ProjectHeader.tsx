@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, FolderKanban } from "lucide-react";
+import { ArrowLeft, FolderKanban, GanttChart, ListTree, Wallet } from "lucide-react";
 import { ConfirmDeleteButton, EditableCell } from "@/components/shared/editable";
 import { cn } from "@/lib/utils";
 import { deleteProjectAction, renameProjectAction } from "@/services/project-actions";
@@ -15,9 +15,9 @@ export function ProjectHeader({ projectId, name }: { projectId: string; name: st
   const [pending, startTransition] = useTransition();
   const base = `/projetos/${projectId}`;
   const tabs = [
-    { href: base, label: "Linha do tempo" },
-    { href: `${base}/rubricas`, label: "Rubricas" },
-    { href: `${base}/orcamento`, label: "Orçamento" },
+    { href: base, label: "Linha do tempo", icon: GanttChart },
+    { href: `${base}/rubricas`, label: "Rubricas", icon: ListTree },
+    { href: `${base}/orcamento`, label: "Orçamento", icon: Wallet },
   ];
 
   return (
@@ -52,19 +52,28 @@ export function ProjectHeader({ projectId, name }: { projectId: string; name: st
           }
         />
       </div>
-      <nav className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+      <nav className="-mx-1 !mt-8 flex gap-4 overflow-x-auto border-b border-border px-1 [scrollbar-width:none]">
         {tabs.map((tab) => {
           const active = pathname === tab.href;
+          const Icon = tab.icon;
           return (
             <Link
               key={tab.href}
               href={tab.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "rounded-lg py-2 text-center text-sm font-medium transition-colors",
-                active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "group relative -mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 pb-3 pt-3 text-sm font-medium transition-colors",
+                active
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
               )}
             >
+              <Icon
+                className={cn(
+                  "size-4 transition-colors",
+                  active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                )}
+              />
               {tab.label}
             </Link>
           );

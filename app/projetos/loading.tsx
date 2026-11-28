@@ -1,5 +1,5 @@
-import { ProjectsSkeleton } from "@/components/projects/ProjectsSkeleton";
+import { ProjectListSkeleton } from "@/components/projects/ProjectSkeletons";
 
 export default function ProjectsLoading() {
-  return <ProjectsSkeleton />;
+  return <ProjectListSkeleton />;
 }

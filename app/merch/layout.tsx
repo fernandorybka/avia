@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Shirt } from "lucide-react";
 import { canCurrentUserAccessMerch, isCurrentUserAdmin } from "@/lib/admin";
 import { MerchNav } from "@/components/merch/MerchNav";
-import { PageSkeleton } from "@/components/PageSkeleton";
+import { MerchRouteSkeleton } from "@/components/merch/MerchSkeletons";
 
 // The heading renders at once; the access check, tabs and content stream inside Suspense
 export default function MerchLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +18,7 @@ export default function MerchLayout({ children }: { children: React.ReactNode })
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Lojinha Miçanga</h1>
           </div>
-          <Suspense fallback={<PageSkeleton framed={false} />}>
+          <Suspense fallback={<MerchRouteSkeleton />}>
             <MerchAccessGate>{children}</MerchAccessGate>
           </Suspense>
         </div>

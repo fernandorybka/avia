@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ProjectHeader } from "@/components/projects/ProjectHeader";
-import { ProjectsSkeleton } from "@/components/projects/ProjectsSkeleton";
+import { ProjectShellSkeleton } from "@/components/projects/ProjectSkeletons";
 import { requireOwnedProjectForRender } from "@/lib/project-guard";
 
 export default function ProjectLayout({
@@ -12,7 +12,7 @@ export default function ProjectLayout({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <Suspense fallback={<ProjectsSkeleton />}>
+    <Suspense fallback={<ProjectShellSkeleton />}>
       <OwnedProjectShell params={params}>{children}</OwnedProjectShell>
     </Suspense>
   );

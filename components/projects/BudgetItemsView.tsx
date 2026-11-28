@@ -15,25 +15,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useStoredFlag } from "@/lib/use-stored-flag";
 import type { BudgetItemView, ProjectData } from "@/services/project-services";
+import { BudgetTotalsCard, PendingDocsPanel } from "./BudgetSummary";
 import { PaymentCard } from "./PaymentCard";
 import { PaymentDialog } from "./PaymentDialog";
-
-function SummaryTile({ label, value, tone }: { label: string; value: string; tone?: "danger" | "warning" }) {
-  return (
-    <div className="rounded-xl border bg-card p-3 shadow-sm">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "text-lg font-semibold tabular-nums text-foreground",
-          tone === "danger" && "text-destructive",
-          tone === "warning" && "text-amber-600 dark:text-amber-400"
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function ProgressBar({ item }: { item: BudgetItemView }) {
   return (
@@ -52,9 +36,12 @@ function ProgressBar({ item }: { item: BudgetItemView }) {
 export function BudgetItemsView({ projectId, data }: { projectId: string; data: ProjectData }) {
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
-  // A new payment shows up open, inside its budget item, ready for the checklist
+  // Bumped on each focus so an already-mounted card remounts, opens and scrolls into view again
+  const [focusNonce, setFocusNonce] = useState(0);
+  // A new payment (or one picked from the pending list) shows up open, inside its budget item, ready for the checklist
   const showCreated = ({ id, budgetItemId }: { id: string; budgetItemId: string | null }) => {
     setJustCreatedId(id);
+    setFocusNonce((n) => n + 1);
     if (budgetItemId) setOpenItemId(budgetItemId);
   };
   const { items, payments, types, totals } = data;
@@ -81,6 +68,13 @@ export function BudgetItemsView({ projectId, data }: { projectId: string; data: 
         balanceCents: visibleItems.reduce((sum, item) => sum + item.balanceCents, 0),
       }
     : totals;
+  const focusPayment = (payment: { id: string; budgetItemId: string | null }) => {
+    if (progressFilter && payment.budgetItemId && progressOf.get(payment.budgetItemId) !== progressFilter) {
+      setProgressFilter(null);
+    }
+    showCreated(payment);
+  };
+  const cardKey = (id: string) => (id === justCreatedId ? `${id}:${focusNonce}` : id);
   const withoutItem = payments.filter((payment) => payment.budgetItemId === null);
 
   if (items.length === 0) {
@@ -97,21 +91,11 @@ export function BudgetItemsView({ projectId, data }: { projectId: string; data: 
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <SummaryTile label="Previsto" value={formatCents(totals.plannedCents)} />
-        <SummaryTile label="Pago" value={formatCents(totals.paidCents)} />
-        <SummaryTile label="Saldo" value={formatCents(totals.balanceCents)} tone={totals.balanceCents < 0 ? "danger" : undefined} />
-        <SummaryTile
-          label="Documentação pendente"
-          value={String(totals.pendingDocsCount)}
-          tone={totals.pendingDocsCount > 0 ? "warning" : undefined}
-        />
-        <SummaryTile
-          label="Rubricas estouradas"
-          value={String(totals.overspentCount)}
-          tone={totals.overspentCount > 0 ? "danger" : undefined}
-        />
-      </div>
+      <BudgetTotalsCard
+        totals={totals}
+        onShowOverspent={() => setProgressFilter("estourada")}
+      />
+      <PendingDocsPanel payments={payments} items={items} types={types} onSelect={focusPayment} />
 
       <div className="flex flex-wrap items-center gap-2">
         <div role="radiogroup" aria-label="Filtrar rubricas por situação" className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
@@ -234,7 +218,7 @@ export function BudgetItemsView({ projectId, data }: { projectId: string; data: 
                               .toSorted((a, b) => b.paymentDate.localeCompare(a.paymentDate))
                               .map((payment) => (
                                 <PaymentCard
-                                  key={payment.id}
+                                  key={cardKey(payment.id)}
                                   projectId={projectId}
                                   payment={payment}
                                   items={items}
@@ -289,7 +273,7 @@ export function BudgetItemsView({ projectId, data }: { projectId: string; data: 
           <ul className="divide-y overflow-hidden rounded-2xl border bg-card shadow-sm">
             {withoutItem.map((payment) => (
               <PaymentCard
-                key={payment.id}
+                key={cardKey(payment.id)}
                 projectId={projectId}
                 payment={payment}
                 items={items}
